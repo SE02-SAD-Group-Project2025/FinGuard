@@ -1,16 +1,21 @@
 // middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
+require('dotenv').config(); // Load environment variables
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Format: Bearer <token>
 
-  if (!token) return res.status(401).json({ message: 'Token missing' });
+  if (!token) {
+    return res.status(401).json({ message: 'Token missing' });
+  }
 
-  jwt.verify(token, 'secret-key', (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Invalid token' });
+    }
 
-    req.user = user; // userId from the login token
+    req.user = user;
     next();
   });
 };

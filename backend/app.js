@@ -10,6 +10,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🔐 Budget routes (add/get budgets)
+const budgetRoutes = require('./routes/budgetRoutes');
+app.use('/api/budgets', budgetRoutes);
+
 // 🔓 Public route
 app.get('/', (req, res) => {
   res.send('FinGuard API is running 🚀');
@@ -17,6 +21,12 @@ app.get('/', (req, res) => {
 
 // 🔐 Auth routes (register/login)
 app.use('/api/auth', authRoutes);
+
+// 🔐 Transaction routes (add/get transactions)
+const transactionRoutes = require('./routes/transactionRoutes');
+app.use('/api/transactions', transactionRoutes);
+
+
 
 // 🔐 Protected route example
 app.get('/api/user/profile', authenticateToken, async (req, res) => {

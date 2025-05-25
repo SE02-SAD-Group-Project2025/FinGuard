@@ -5,21 +5,32 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// Verify transporter
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ Gmail transporter failed:', error.message);
+  } else {
+    console.log('✅ Gmail transporter is ready');
   }
 });
 
-const sendBudgetAlertEmail = (to, category, spent, limit) => {
+const sendBudgetAlertEmail = async (to, username, category, spent, limit) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to,
-    subject: `⚠️ FinGuard Alert: Over Budget in ${category}`,
-    text: `You've spent ${spent} in the "${category}" category, which exceeds your monthly budget limit of ${limit}. Please review your expenses and adjust your budget accordingly.`,
+    subject: '⚠️ FinGuard Budget Alert',
+    text: `Hi ${username},\n\nYou've spent Rs. ${spent} in "${category}", which exceeds your monthly budget limit of Rs. ${limit}.\n\nStay mindful — every rupee counts toward your goals.\n\n— FinGuard Team`
   };
 
   return transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendBudgetAlertEmail };
-// This module handles sending budget alert emails using Nodemailer
-// It exports a function that takes the recipient's email, category, spent amount, and budget limit
+module.exports = {
+  transporter,
+  sendBudgetAlertEmail
+};
+// Test the email service

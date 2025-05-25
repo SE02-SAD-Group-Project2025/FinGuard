@@ -1,6 +1,6 @@
 const db = require('../db');
-const { sendBudgetAlertEmail } = require('../utils/emailService');
 
+// Add a new monthly budget
 const addBudget = async (req, res) => {
   const userId = req.user.userId;
   const { category, limit_amount, month, year } = req.body;
@@ -11,32 +11,35 @@ const addBudget = async (req, res) => {
 
   try {
     const result = await db.query(
-      'INSERT INTO budgets (user_id, category, limit_amount, month, year) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      `INSERT INTO budgets (user_id, category, limit_amount, month, year)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [userId, category, limit_amount, month, year]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error("🔴 ADD BUDGET ERROR:", err.message);
+    console.error('🔴 ADD BUDGET ERROR:', err.message);
     res.status(500).json({ error: 'Failed to add budget' });
   }
 };
 
+// Get all budgets for a specific month/year
 const getBudgets = async (req, res) => {
   const userId = req.user.userId;
   const { month, year } = req.query;
 
   try {
     const result = await db.query(
-      'SELECT * FROM budgets WHERE user_id = $1 AND month = $2 AND year = $3',
+      `SELECT * FROM budgets WHERE user_id = $1 AND month = $2 AND year = $3`,
       [userId, month, year]
     );
     res.json(result.rows);
   } catch (err) {
-    console.error("🔴 GET BUDGET ERROR:", err.message);
+    console.error('🔴 GET BUDGET ERROR:', err.message);
     res.status(500).json({ error: 'Failed to fetch budgets' });
   }
 };
 
+// Return budget summary with status (for UI display)
 const getBudgetSummary = async (req, res) => {
   const userId = req.user.userId;
   const { month, year } = req.query;
@@ -46,13 +49,12 @@ const getBudgetSummary = async (req, res) => {
   }
 
   try {
-    // Get budget limits
     const budgetsRes = await db.query(
-      'SELECT category, limit_amount FROM budgets WHERE user_id = $1 AND month = $2 AND year = $3',
+      `SELECT category, limit_amount FROM budgets
+       WHERE user_id = $1 AND month = $2 AND year = $3`,
       [userId, month, year]
     );
 
-    // Get actual expenses
     const expensesRes = await db.query(
       `SELECT category, SUM(amount) as total_spent
        FROM transactions
@@ -66,32 +68,16 @@ const getBudgetSummary = async (req, res) => {
       expensesMap[row.category] = parseFloat(row.total_spent);
     }
 
-    const summary = [];
-
-    for (const budget of budgetsRes.rows) {
+    const summary = budgetsRes.rows.map(budget => {
       const spent = expensesMap[budget.category] || 0;
-      const overBudget = spent > parseFloat(budget.limit_amount);
-
-      // Update alert flag
-      await db.query(
-        `UPDATE budgets SET alert_triggered = $1 WHERE user_id = $2 AND category = $3 AND month = $4 AND year = $5`,
-        [overBudget, userId, budget.category, month, year]
-      );
-
-      // Send email alert if over budget
-      if (overBudget) {
-        // Replace this with actual user email if available from DB
-        await sendBudgetAlertEmail('Finguard.alert@gmail.com', budget.category, spent, budget.limit_amount);
-      }
-
-      summary.push({
+      return {
         category: budget.category,
         budget_limit: parseFloat(budget.limit_amount),
-        spent: spent,
+        spent,
         remaining: parseFloat(budget.limit_amount) - spent,
-        status: overBudget ? 'Over Budget' : 'Within Budget'
-      });
-    }
+        status: spent > budget.limit_amount ? 'Over Budget' : 'Within Budget'
+      };
+    });
 
     res.json(summary);
   } catch (err) {
@@ -100,6 +86,7 @@ const getBudgetSummary = async (req, res) => {
   }
 };
 
+// Show budgets where alert was triggered
 const getBudgetAlerts = async (req, res) => {
   const userId = req.user.userId;
 
@@ -108,10 +95,9 @@ const getBudgetAlerts = async (req, res) => {
       `SELECT * FROM budgets WHERE user_id = $1 AND alert_triggered = TRUE`,
       [userId]
     );
-
     res.json(result.rows);
   } catch (err) {
-    console.error("🔴 ALERT FETCH ERROR:", err.message);
+    console.error('🔴 ALERT FETCH ERROR:', err.message);
     res.status(500).json({ error: 'Failed to fetch budget alerts' });
   }
 };
@@ -122,5 +108,3 @@ module.exports = {
   getBudgetSummary,
   getBudgetAlerts
 };
-// This module handles budget management, including adding budgets, fetching budgets, and generating budget summaries
-// It also sends email alerts when budgets are exceeded

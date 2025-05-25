@@ -1,10 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/authMiddleware');
-const { addBudget, getBudgets, getBudgetSummary, getBudgetAlerts } = require('../controllers/budgetController');
-// Budget routes for adding and retrieving budgets
-// These routes are protected by the authenticateToken middleware
 
+// ✅ Make sure this import matches your actual export from budgetController.js
+const {
+  addBudget,
+  getBudgets,
+  getBudgetSummary,
+  getBudgetAlerts,
+} = require('../controllers/budgetController');
+
+// ✅ Correct route handlers
 router.post('/', authenticateToken, addBudget);
 router.get('/', authenticateToken, getBudgets);
 router.get('/summary', authenticateToken, getBudgetSummary);

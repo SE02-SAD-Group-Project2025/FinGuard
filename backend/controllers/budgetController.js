@@ -1,5 +1,6 @@
 const db = require('../db');
 
+
 // Add a new monthly budget
 const addBudget = async (req, res) => {
   const userId = req.user.userId;
@@ -102,9 +103,68 @@ const getBudgetAlerts = async (req, res) => {
   }
 };
 
+const updateBudget = async (req, res) => {
+  const userId = req.user.userId;
+  const budgetId = req.params.id;
+  const { category, limit_amount, month, year } = req.body;
+
+  if (!category || !limit_amount || !month || !year) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  try {
+    const result = await db.query(
+      `UPDATE budgets
+       SET category = $1, limit_amount = $2, month = $3, year = $4
+       WHERE id = $5 AND user_id = $6
+       RETURNING *`,
+      [category, limit_amount, month, year, budgetId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Budget not found or unauthorized' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("🔴 UPDATE BUDGET ERROR:", err.message);
+    res.status(500).json({ error: 'Failed to update budget' });
+  }
+};
+
+
+const deleteBudget = async (req, res) => {
+  const userId = req.user.userId;
+  const budgetId = req.params.id;
+
+  try {
+    const result = await db.query(
+      'DELETE FROM budgets WHERE id = $1 AND user_id = $2 RETURNING *',
+      [budgetId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Budget not found or not authorized' });
+    }
+
+    res.json({ message: 'Budget deleted successfully', budget: result.rows[0] });
+  } catch (err) {
+    console.error('🔴 DELETE BUDGET ERROR:', err.message);
+    res.status(500).json({ error: 'Failed to delete budget' });
+  }
+};
+
+
 module.exports = {
   addBudget,
   getBudgets,
   getBudgetSummary,
-  getBudgetAlerts
+  getBudgetAlerts,
+  updateBudget,
+  deleteBudget
 };
+
+
+
+// Update budget
+//Delete budget also added

@@ -1,19 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/authMiddleware');
-
-// ✅ Make sure this import matches your actual export from budgetController.js
 const {
   addBudget,
   getBudgets,
   getBudgetSummary,
   getBudgetAlerts,
+  updateBudget,
+  deleteBudget
 } = require('../controllers/budgetController');
 
-// ✅ Correct route handlers
+// 🔐 All routes are protected
 router.post('/', authenticateToken, addBudget);
 router.get('/', authenticateToken, getBudgets);
 router.get('/summary', authenticateToken, getBudgetSummary);
 router.get('/alerts', authenticateToken, getBudgetAlerts);
+router.delete('/:id', authenticateToken, deleteBudget);
+// ✅ Add this to support editing a budget
+router.put('/:id', authenticateToken, updateBudget);
 
 module.exports = router;
+// This module defines the budget routes for adding, fetching, and updating budgets
+// It uses the `authenticateToken` middleware to protect the routes

@@ -4,11 +4,13 @@ require('dotenv').config();
 const db = require('./db');
 const authRoutes = require('./routes/authRoutes');
 const authenticateToken = require('./middleware/authMiddleware');
-
+const summaryRoutes = require('./routes/summaryRoutes');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/summary', summaryRoutes);
+
 
 // 🔐 Budget routes (add/get budgets)
 const budgetRoutes = require('./routes/budgetRoutes');

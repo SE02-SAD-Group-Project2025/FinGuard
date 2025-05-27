@@ -16,7 +16,6 @@ router.get('/', authenticateToken, getBudgets);
 router.get('/summary', authenticateToken, getBudgetSummary);
 router.get('/alerts', authenticateToken, getBudgetAlerts);
 router.delete('/:id', authenticateToken, deleteBudget);
-// ✅ Add this to support editing a budget
 router.put('/:id', authenticateToken, updateBudget);
 
 module.exports = router;

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './login.css';
-import finguardLogo from './assets/finguard.jpg';
-import loginBg from './assets/loginbg.jpg';
-
+import loginBg from '../assets/loginbg.jpg';
+import finguardLogo from '../assets/finguard.jpg';
 const Register = () => {
   const [formData, setFormData] = useState({
     email: '',

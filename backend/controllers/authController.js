@@ -33,13 +33,23 @@ const login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        username: user.username,
+        email: user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
     res.json({ token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
   }
 };
+
 
 module.exports = { register, login };
 // ✅ Middleware to protect routes

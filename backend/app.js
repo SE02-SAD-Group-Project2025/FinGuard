@@ -6,6 +6,9 @@ const authRoutes = require('./routes/authRoutes');
 const authenticateToken = require('./middleware/authMiddleware');
 const summaryRoutes = require('./routes/summaryRoutes');
 const app = express();
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/admin', adminRoutes);
+
 
 app.use(cors());
 app.use(express.json());

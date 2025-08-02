@@ -30,6 +30,10 @@ const login = async (req, res) => {
     if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
 
     const user = result.rows[0];
+    if (user.is_banned) {
+      return res.status(403).json({ error: 'Your account has been banned. Please contact support.' });
+    }
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -43,13 +47,26 @@ const login = async (req, res) => {
       { expiresIn: '1h' }
     );
 
+    // ✅ Log the login activity
+try {
+  await db.query(
+    'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
+    [user.id, 'User logged in']
+  );
+  console.log('✅ Login log inserted for user:', user.username);
+} catch (err) {
+  console.error('❌ Failed to insert log:', err);
+}
+
+
+
+
     res.json({ token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
   }
 };
-
 
 module.exports = { register, login };
 // ✅ Middleware to protect routes

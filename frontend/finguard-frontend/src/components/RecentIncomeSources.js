@@ -3,13 +3,17 @@ import { Edit2, Save, X, Trash2 } from 'lucide-react';
 
 
 const RecentIncomeSources = ({ incomes, onIncomeEdit, onIncomeDelete }) => {
-  const formatAmount = (amount) =>
-    amount.toLocaleString('en-LK', {
-      style: 'currency',
-      currency: 'LKR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+ const formatAmount = (amount) => {
+  const value = Number(amount);
+  if (isNaN(value)) return 'Rs. 0.00';
+  return value.toLocaleString('en-LK', {
+    style: 'currency',
+    currency: 'LKR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 
  const totalIncome = incomes.reduce((sum, income) => sum + Number(income.amount || 0), 0);
 

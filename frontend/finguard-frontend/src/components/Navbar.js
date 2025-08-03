@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logo from '../assets/finguard.jpg';
-import profilePic from '../assets/dp.png';
 import { jwtDecode } from 'jwt-decode';
 
 const Navbar = () => {
@@ -25,17 +24,62 @@ const Navbar = () => {
     navigate('/');
   };
 
+  // Generate dynamic profile picture
+  const generateProfilePicture = (username) => {
+    if (!username) return { letter: 'U', bgColor: 'bg-gray-500' };
+    
+    const firstLetter = username.charAt(0).toUpperCase();
+    const colors = [
+      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
+      'bg-orange-500', 'bg-cyan-500', 'bg-lime-500', 'bg-rose-500'
+    ];
+    
+    // Use username length and first character to pick a consistent color
+    const colorIndex = (username.length + username.charCodeAt(0)) % colors.length;
+    const bgColor = colors[colorIndex];
+    
+    return { letter: firstLetter, bgColor };
+  };
+
+  // Get user initials for profile picture
+  const getUserInitials = (username, email) => {
+    if (username && username.length >= 2) {
+      return username.substring(0, 2).toUpperCase();
+    } else if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return 'US';
+  };
+
+  // Get user data from token
   const token = localStorage.getItem('finguard-token');
   let username = 'User';
+  let email = '';
+  let role = 'User';
 
   if (token) {
     try {
       const decoded = jwtDecode(token);
       username = decoded.username || 'User';
+      email = decoded.email || '';
+      role = decoded.role || 'User';
     } catch (err) {
       console.error('Token decode failed:', err.message);
     }
   }
+
+  const profilePic = generateProfilePicture(username);
+  const initials = getUserInitials(username, email);
+
+  // Get role indicator
+  const getRoleIndicator = (userRole) => {
+    switch (userRole) {
+      case 'Admin': return '👑';
+      case 'Premium User': return '⭐';
+      default: return '';
+    }
+  };
 
   return (
     <nav className="bg-white shadow-lg rounded-lg overflow-hidden sticky top-0 z-50" style={{ minHeight: '64px' }}>
@@ -48,16 +92,60 @@ const Navbar = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            <button onClick={() => handleNavigation('/dashboard')} className="text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
-            <button onClick={() => handleNavigation('/budget')} className="text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium">Budget</button>
-            <button onClick={() => handleNavigation('/profile')} className="text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium">Profile</button>
-            <button onClick={handleLogout} className="text-black bg-green-300 hover:bg-green-400 px-4 py-2 rounded-md text-sm font-medium">Logout</button>
+            <button 
+              onClick={() => handleNavigation('/dashboard')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/dashboard' ? 'bg-green-200' : ''
+              }`}
+            >
+              Dashboard
+            </button>
+            <button 
+              onClick={() => handleNavigation('/budget')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/budget' ? 'bg-green-200' : ''
+              }`}
+            >
+              Budget
+            </button>
+            <button 
+              onClick={() => handleNavigation('/profile')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/profile' ? 'bg-green-200' : ''
+              }`}
+            >
+              Profile
+            </button>
+            <button 
+              onClick={handleLogout} 
+              className="text-black bg-green-300 hover:bg-green-400 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Logout
+            </button>
           </div>
 
-          {/* User Display */}
-          <div className="flex items-center space-x-2">
-            <img src={profilePic} alt="User Profile" className="h-10 w-10 rounded-full" />
-            <span className="text-black text-sm font-medium">{username}</span>
+          {/* User Display with Dynamic Profile Picture */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              {/* Dynamic Profile Picture */}
+              <div className={`h-10 w-10 ${profilePic.bgColor} rounded-full flex items-center justify-center text-white font-bold text-sm relative`}>
+                {initials}
+                {/* Role indicator */}
+                {getRoleIndicator(role) && (
+                  <span className="absolute -top-1 -right-1 text-xs">
+                    {getRoleIndicator(role)}
+                  </span>
+                )}
+              </div>
+              
+              {/* Username and Role */}
+              <div className="flex flex-col">
+                <span className="text-black text-sm font-medium">{username}</span>
+                {role !== 'User' && (
+                  <span className="text-xs text-gray-500">{role}</span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -78,10 +166,36 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden bg-green-100">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <button onClick={() => handleNavigation('/dashboard')} className="text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium">Dashboard</button>
-              <button onClick={() => handleNavigation('/budget')} className="text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium">Budget</button>
-              <button onClick={() => handleNavigation('/profile')} className="text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium">Profile</button>
-              <button onClick={handleLogout} className="block text-black bg-green-300 hover:bg-green-400 px-3 py-2 rounded-md text-base font-medium">Logout</button>
+              <button 
+                onClick={() => handleNavigation('/dashboard')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/dashboard' ? 'bg-green-200' : ''
+                }`}
+              >
+                Dashboard
+              </button>
+              <button 
+                onClick={() => handleNavigation('/budget')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/budget' ? 'bg-green-200' : ''
+                }`}
+              >
+                Budget
+              </button>
+              <button 
+                onClick={() => handleNavigation('/profile')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/profile' ? 'bg-green-200' : ''
+                }`}
+              >
+                Profile
+              </button>
+              <button 
+                onClick={handleLogout} 
+                className="block text-black bg-green-300 hover:bg-green-400 px-3 py-2 rounded-md text-base font-medium w-full text-left"
+              >
+                Logout
+              </button>
             </div>
           </div>
         )}

@@ -80,3 +80,85 @@ exports.getLogs = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// Fetch all categories
+exports.getCategories = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name FROM categories ORDER BY name');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Add a new category
+exports.addCategory = async (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ error: 'Category name is required and must be a string.' });
+  }
+
+  try {
+    const existing = await pool.query('SELECT id FROM categories WHERE name = $1', [name]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Category already exists.' });
+    }
+
+    const result = await pool.query(
+      'INSERT INTO categories (name) VALUES ($1) RETURNING id, name',
+      [name]
+    );
+    res.status(201).json({ message: 'Category added', category: result.rows[0] });
+  } catch (error) {
+    console.error('Error adding category:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Update a category name
+exports.updateCategory = async (req, res) => {
+  const categoryId = req.params.id;
+  const { name } = req.body;
+
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ error: 'Valid category name is required.' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE categories SET name = $1 WHERE id = $2 RETURNING id, name',
+      [name, categoryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    res.json({ message: 'Category updated', category: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Delete a category
+exports.deleteCategory = async (req, res) => {
+  const categoryId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM categories WHERE id = $1 RETURNING id, name',
+      [categoryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    res.json({ message: 'Category deleted', category: result.rows[0] });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

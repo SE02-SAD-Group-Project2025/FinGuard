@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './login.css';
 import finguardLogo from '../assets/finguard.jpg'; 
+import { jwtDecode } from 'jwt-decode';
+
+
+
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -9,29 +13,38 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-      if (!response.ok) {
-        throw new Error('Invalid credentials');
-      }
-
-      const data = await response.json();
-      localStorage.setItem('finguard-token', data.token);
-      navigate('/dashboard');
-    } catch (err) {
-      console.error("Login failed:", err.message);
-      setError("Login failed. Check your credentials.");
+    if (!response.ok) {
+      throw new Error('Invalid credentials');
     }
-  };
+
+    const data = await response.json();
+    localStorage.setItem('finguard-token', data.token);
+
+    const decoded = jwtDecode(data.token);
+    const role = decoded.role;
+
+    if (role === 'Admin') {
+      navigate('/admin/AdminDashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  } catch (err) {
+    console.error("Login failed:", err.message);
+    setError("Login failed. Check your credentials.");
+  }
+};
+
 
 return (
   <div className="auth-page">

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute'; // ✅ Only import PrivateRoute
 
+
 // Pages & Components
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
@@ -13,7 +14,7 @@ import Footer from './components/Footer';
 import Login from './components/login';
 import Register from './components/register';
 import AdminDashboard from './components/AdminDashboard';
-
+import ForgotPassword from './components/ForgotPassword';
 function App() {
   return (
     <Router>
@@ -31,6 +32,7 @@ function App() {
         <Route path="/expense" element={<PrivateRoute><ExpensePage /></PrivateRoute>} />
         <Route path="/budget" element={<PrivateRoute><BudgetPage /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
         {/* 🛡️ ADMIN-ONLY Protected Route */}
         <Route path="/admin/AdminDashboard" element={<PrivateRoute requireAdmin={true}><AdminDashboard /></PrivateRoute>} />

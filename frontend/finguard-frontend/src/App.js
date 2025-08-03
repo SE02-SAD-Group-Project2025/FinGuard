@@ -15,6 +15,8 @@ import Login from './components/login';
 import Register from './components/register';
 import AdminDashboard from './components/AdminDashboard';
 import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
+
 function App() {
   return (
     <Router>
@@ -33,7 +35,7 @@ function App() {
         <Route path="/budget" element={<PrivateRoute><BudgetPage /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        
+        <Route path="/reset-password" element={<ResetPassword />} />
         {/* 🛡️ ADMIN-ONLY Protected Route */}
         <Route path="/admin/AdminDashboard" element={<PrivateRoute requireAdmin={true}><AdminDashboard /></PrivateRoute>} />
       </Routes>

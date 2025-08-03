@@ -35,6 +35,7 @@ app.get('/', (req, res) => {
 // Import middleware and database
 const { authenticateToken } = require('./middleware/authMiddleware');
 const db = require('./db');
+const { sendPasswordResetEmail, sendWelcomeEmail } = require('./utils/emailService');
 
 // Load routes
 const authRoutes = require('./routes/authRoutes');
@@ -177,6 +178,15 @@ app.post('/api/auth/register-enhanced', async (req, res) => {
       console.error('❌ Failed to create registration log:', logErr);
     }
 
+    // 📧 Send welcome email (don't wait for it, send in background)
+    try {
+      await sendWelcomeEmail(email, username);
+      console.log('📧 Welcome email sent to:', email);
+    } catch (emailErr) {
+      console.error('❌ Failed to send welcome email:', emailErr);
+      // Don't fail registration if email fails
+    }
+
     res.status(201).json({ 
       message: 'Registration successful! You are now logged in.',
       user: {
@@ -195,7 +205,7 @@ app.post('/api/auth/register-enhanced', async (req, res) => {
   }
 });
 
-// Forgot Password endpoint
+// 📧 REAL Forgot Password endpoint with EMAIL SENDING
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
 
@@ -215,35 +225,38 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       success: true
     });
 
-    // If user exists, you would normally send email here
+    // If user exists, ACTUALLY SEND EMAIL
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
       
-      // TODO: Implement actual email sending service (SendGrid, Nodemailer, etc.)
-      console.log(`📧 Password reset requested for user: ${user.username} (${user.email})`);
+      console.log(`📧 Sending password reset email for user: ${user.username} (${user.email})`);
       
-      // Generate a secure reset token (in production, store this in database with expiration)
+      // Generate a secure reset token
       const resetToken = jwt.sign(
         { userId: user.id, email: user.email, type: 'password_reset' },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
       
-      // For development, log the reset link
-      console.log(`🔗 Reset link: http://localhost:3000/reset-password?token=${resetToken}`);
+      try {
+        // 📧 ACTUALLY SEND THE EMAIL
+        await sendPasswordResetEmail(user.email, user.username, resetToken);
+        console.log('✅ Password reset email sent successfully to:', user.email);
+      } catch (emailErr) {
+        console.error('❌ Failed to send password reset email:', emailErr);
+        // Don't reveal email sending failure to user for security
+      }
       
       // Log the password reset request
       try {
         await db.query(
           'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
-          [user.id, 'Password reset requested']
+          [user.id, 'Password reset email sent']
         );
       } catch (logErr) {
         console.error('❌ Failed to log password reset request:', logErr);
       }
       
-      // In production, send actual email:
-      // await sendPasswordResetEmail(user.email, user.username, resetToken);
     } else {
       console.log(`❌ Password reset requested for non-existent email: ${email}`);
     }
@@ -484,12 +497,15 @@ app.listen(PORT, () => {
   console.log('✅ Enhanced authentication endpoints loaded');
   console.log('✅ Username/Email availability checking enabled');
   console.log('✅ Enhanced registration with full_name, dob, phone');
+  console.log('📧 REAL email sending enabled (Gmail)');
+  console.log('✅ Password reset emails with beautiful HTML templates');
+  console.log('🎉 Welcome emails for new registrations');
   console.log('✅ Profile management endpoints loaded');
-  console.log('✅ Password reset functionality enabled');
   console.log('✅ All routes loaded successfully');
   console.log('=====================================');
   console.log('🌐 API Base URL: http://localhost:' + PORT);
   console.log('📱 Frontend URL: http://localhost:3000');
   console.log('🔧 Admin Panel: http://localhost:3000/admin');
+  console.log('📧 Email Service: Gmail (' + process.env.EMAIL_USER + ')');
   console.log('=====================================');
 });

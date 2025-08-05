@@ -20,7 +20,28 @@ const addTransaction = async (req, res) => {
       [userId, type, category, amount, description, date]
     );
 
-    console.log('✅ Transaction saved:', insertResult.rows[0]);
+    const newTransaction = insertResult.rows[0];
+    console.log('✅ Transaction saved:', newTransaction);
+
+    // ✅ ENHANCED: Log transaction addition with details
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, `${type === 'income' ? 'Income' : 'Expense'} added`, JSON.stringify({
+          transaction_id: newTransaction.id,
+          type: type,
+          category: category,
+          amount: parseFloat(amount),
+          description: description,
+          date: date,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log(`✅ ${type} transaction log created`);
+    } catch (logErr) {
+      console.error('❌ Failed to log transaction addition:', logErr);
+    }
 
     // Only proceed for expenses
     if (type === 'expense') {
@@ -68,6 +89,27 @@ const addTransaction = async (req, res) => {
             `UPDATE budgets SET alert_triggered = TRUE WHERE id = $1`,
             [budget.id]
           );
+
+          // ✅ ENHANCED: Log budget alert triggered
+          try {
+            await db.query(
+              'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+              [userId, 'Budget alert triggered', JSON.stringify({
+                category: category,
+                budget_id: budget.id,
+                budget_limit: limit,
+                total_spent: totalSpent,
+                over_budget_by: totalSpent - limit,
+                email_sent: true,
+                triggering_transaction_id: newTransaction.id,
+                month: month,
+                year: year
+              })]
+            );
+            console.log('✅ Budget alert log created');
+          } catch (logErr) {
+            console.error('❌ Failed to log budget alert:', logErr);
+          }
         }
 
         // Reset alert if under limit again
@@ -76,11 +118,29 @@ const addTransaction = async (req, res) => {
             `UPDATE budgets SET alert_triggered = FALSE WHERE id = $1`,
             [budget.id]
           );
+
+          // ✅ ENHANCED: Log budget alert reset
+          try {
+            await db.query(
+              'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+              [userId, 'Budget alert reset', JSON.stringify({
+                category: category,
+                budget_id: budget.id,
+                budget_limit: limit,
+                total_spent: totalSpent,
+                month: month,
+                year: year
+              })]
+            );
+            console.log('✅ Budget alert reset log created');
+          } catch (logErr) {
+            console.error('❌ Failed to log budget alert reset:', logErr);
+          }
         }
       }
     }
 
-    res.status(201).json({ message: 'Transaction added successfully' });
+    res.status(201).json({ message: 'Transaction added successfully', transaction: newTransaction });
   } catch (err) {
     console.error('🔴 ADD TRANSACTION ERROR:', err.message);
     res.status(500).json({ error: 'Failed to add transaction' });
@@ -116,19 +176,98 @@ const deleteTransaction = async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found or unauthorized' });
     }
 
-    res.json({ message: 'Transaction deleted successfully', transaction: result.rows[0] });
+    const deletedTransaction = result.rows[0];
+
+    // ✅ ENHANCED: Log transaction deletion with details
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, `${deletedTransaction.type === 'income' ? 'Income' : 'Expense'} deleted`, JSON.stringify({
+          deleted_transaction_id: deletedTransaction.id,
+          type: deletedTransaction.type,
+          category: deletedTransaction.category,
+          amount: parseFloat(deletedTransaction.amount),
+          description: deletedTransaction.description,
+          original_date: deletedTransaction.date,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log(`✅ ${deletedTransaction.type} deletion log created`);
+    } catch (logErr) {
+      console.error('❌ Failed to log transaction deletion:', logErr);
+    }
+
+    res.json({ message: 'Transaction deleted successfully', transaction: deletedTransaction });
   } catch (err) {
     console.error('🔴 DELETE TRANSACTION ERROR:', err.message);
     res.status(500).json({ error: 'Failed to delete transaction' });
   }
-  
 };
 
+// ✅ ENHANCED: Add updateTransaction function with logging
+const updateTransaction = async (req, res) => {
+  const userId = req.user.userId;
+  const transactionId = req.params.id;
+  const { type, category, amount, description, date } = req.body;
+
+  try {
+    // Get current transaction for logging
+    const currentTransaction = await db.query(
+      'SELECT * FROM transactions WHERE id = $1 AND user_id = $2',
+      [transactionId, userId]
+    );
+
+    if (currentTransaction.rows.length === 0) {
+      return res.status(404).json({ error: 'Transaction not found or unauthorized' });
+    }
+
+    const oldTransaction = currentTransaction.rows[0];
+
+    const result = await db.query(
+      `UPDATE transactions 
+       SET type = $1, category = $2, amount = $3, description = $4, date = $5
+       WHERE id = $6 AND user_id = $7 
+       RETURNING *`,
+      [type, category, amount, description, date, transactionId, userId]
+    );
+
+    const updatedTransaction = result.rows[0];
+
+    // ✅ ENHANCED: Log transaction update with detailed changes
+    try {
+      const changes = {};
+      if (oldTransaction.type !== type) changes.type = { old: oldTransaction.type, new: type };
+      if (oldTransaction.category !== category) changes.category = { old: oldTransaction.category, new: category };
+      if (parseFloat(oldTransaction.amount) !== parseFloat(amount)) changes.amount = { old: parseFloat(oldTransaction.amount), new: parseFloat(amount) };
+      if (oldTransaction.description !== description) changes.description = { old: oldTransaction.description, new: description };
+      if (oldTransaction.date !== date) changes.date = { old: oldTransaction.date, new: date };
+
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, `${type === 'income' ? 'Income' : 'Expense'} updated`, JSON.stringify({
+          transaction_id: transactionId,
+          changes: changes,
+          fields_changed: Object.keys(changes),
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log(`✅ ${type} update log created`);
+    } catch (logErr) {
+      console.error('❌ Failed to log transaction update:', logErr);
+    }
+
+    res.json({ message: 'Transaction updated successfully', transaction: updatedTransaction });
+  } catch (err) {
+    console.error('🔴 UPDATE TRANSACTION ERROR:', err.message);
+    res.status(500).json({ error: 'Failed to update transaction' });
+  }
+};
 
 module.exports = {
   addTransaction,
   getTransactions,
   deleteTransaction,
+  updateTransaction
 };
-
-

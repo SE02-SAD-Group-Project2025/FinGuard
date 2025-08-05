@@ -1,6 +1,5 @@
 const db = require('../db');
 
-
 // Add a new monthly budget
 const addBudget = async (req, res) => {
   const userId = req.user.userId;
@@ -16,7 +15,30 @@ const addBudget = async (req, res) => {
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [userId, category, limit_amount, month, year]
     );
-    res.status(201).json(result.rows[0]);
+
+    const newBudget = result.rows[0];
+
+    // ✅ ENHANCED: Log budget creation with details
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Budget created', JSON.stringify({
+          budget_id: newBudget.id,
+          category: category,
+          limit_amount: parseFloat(limit_amount),
+          month: month,
+          year: year,
+          period: `${month}/${year}`,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log('✅ Budget creation log created');
+    } catch (logErr) {
+      console.error('❌ Failed to log budget creation:', logErr);
+    }
+
+    res.status(201).json(newBudget);
   } catch (err) {
     console.error('🔴 ADD BUDGET ERROR:', err.message);
     res.status(500).json({ error: 'Failed to add budget' });
@@ -113,6 +135,18 @@ const updateBudget = async (req, res) => {
   }
 
   try {
+    // Get current budget for logging
+    const currentBudget = await db.query(
+      'SELECT * FROM budgets WHERE id = $1 AND user_id = $2',
+      [budgetId, userId]
+    );
+
+    if (currentBudget.rows.length === 0) {
+      return res.status(404).json({ error: 'Budget not found or unauthorized' });
+    }
+
+    const oldBudget = currentBudget.rows[0];
+
     const result = await db.query(
       `UPDATE budgets
        SET category = $1, limit_amount = $2, month = $3, year = $4
@@ -121,17 +155,39 @@ const updateBudget = async (req, res) => {
       [category, limit_amount, month, year, budgetId, userId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Budget not found or unauthorized' });
+    const updatedBudget = result.rows[0];
+
+    // ✅ ENHANCED: Log budget update with detailed changes
+    try {
+      const changes = {};
+      if (oldBudget.category !== category) changes.category = { old: oldBudget.category, new: category };
+      if (parseFloat(oldBudget.limit_amount) !== parseFloat(limit_amount)) changes.limit_amount = { old: parseFloat(oldBudget.limit_amount), new: parseFloat(limit_amount) };
+      if (oldBudget.month !== month) changes.month = { old: oldBudget.month, new: month };
+      if (oldBudget.year !== year) changes.year = { old: oldBudget.year, new: year };
+
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Budget updated', JSON.stringify({
+          budget_id: budgetId,
+          changes: changes,
+          fields_changed: Object.keys(changes),
+          old_period: `${oldBudget.month}/${oldBudget.year}`,
+          new_period: `${month}/${year}`,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log('✅ Budget update log created');
+    } catch (logErr) {
+      console.error('❌ Failed to log budget update:', logErr);
     }
 
-    res.json(result.rows[0]);
+    res.json(updatedBudget);
   } catch (err) {
     console.error("🔴 UPDATE BUDGET ERROR:", err.message);
     res.status(500).json({ error: 'Failed to update budget' });
   }
 };
-
 
 const deleteBudget = async (req, res) => {
   const userId = req.user.userId;
@@ -147,13 +203,35 @@ const deleteBudget = async (req, res) => {
       return res.status(404).json({ error: 'Budget not found or not authorized' });
     }
 
-    res.json({ message: 'Budget deleted successfully', budget: result.rows[0] });
+    const deletedBudget = result.rows[0];
+
+    // ✅ ENHANCED: Log budget deletion with details
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Budget deleted', JSON.stringify({
+          deleted_budget_id: deletedBudget.id,
+          category: deletedBudget.category,
+          limit_amount: parseFloat(deletedBudget.limit_amount),
+          month: deletedBudget.month,
+          year: deletedBudget.year,
+          period: `${deletedBudget.month}/${deletedBudget.year}`,
+          was_alert_triggered: deletedBudget.alert_triggered,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log('✅ Budget deletion log created');
+    } catch (logErr) {
+      console.error('❌ Failed to log budget deletion:', logErr);
+    }
+
+    res.json({ message: 'Budget deleted successfully', budget: deletedBudget });
   } catch (err) {
     console.error('🔴 DELETE BUDGET ERROR:', err.message);
     res.status(500).json({ error: 'Failed to delete budget' });
   }
 };
-
 
 module.exports = {
   addBudget,
@@ -163,8 +241,3 @@ module.exports = {
   updateBudget,
   deleteBudget
 };
-
-
-
-// Update budget
-//Delete budget also added

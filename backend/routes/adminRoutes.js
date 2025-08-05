@@ -7,6 +7,7 @@ const { authenticateToken, requireAdmin } = require('../middleware/authMiddlewar
 router.use(authenticateToken);
 router.use(requireAdmin);
 
+// ================== USER MANAGEMENT ROUTES ==================
 // Admin: Get all users
 router.get('/users', adminController.getAllUsers);
 
@@ -16,8 +17,11 @@ router.patch('/users/:id/ban', adminController.banOrUnbanUser);
 // Admin: Update user role (specific user by ID)
 router.put('/users/:id', adminController.updateUserRole);
 
-// Admin: Get system logs
+// ================== LOGS MANAGEMENT ROUTES ==================
+// Admin: Get system logs with filtering and pagination
 router.get('/logs', adminController.getLogs);
 
+// Admin: Get log statistics  
+router.get('/logs/stats', adminController.getLogStats);
 
 module.exports = router;

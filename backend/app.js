@@ -167,15 +167,37 @@ app.post('/api/auth/register-enhanced', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Log registration activity
+    // ✅ ENHANCED: Log registration activity with details
     try {
       await db.query(
-        'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
-        [newUser.id, 'User registered and logged in']
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [newUser.id, 'User registered', JSON.stringify({
+          username: newUser.username,
+          email: newUser.email,
+          full_name: full_name,
+          registration_type: 'enhanced',
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
       );
       console.log('✅ Registration log created');
     } catch (logErr) {
       console.error('❌ Failed to create registration log:', logErr);
+    }
+
+    // ✅ ENHANCED: Log immediate login after registration
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [newUser.id, 'User logged in', JSON.stringify({
+          login_method: 'post_registration',
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log('✅ Post-registration login log created');
+    } catch (logErr) {
+      console.error('❌ Failed to create login log:', logErr);
     }
 
     // 📧 Send welcome email (don't wait for it, send in background)
@@ -247,11 +269,16 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         // Don't reveal email sending failure to user for security
       }
       
-      // Log the password reset request
+      // ✅ ENHANCED: Log the password reset request with details
       try {
         await db.query(
-          'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
-          [user.id, 'Password reset email sent']
+          'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+          [user.id, 'Password reset email sent', JSON.stringify({
+            email: user.email,
+            ip_address: req.ip || req.connection?.remoteAddress,
+            user_agent: req.get('User-Agent'),
+            reset_method: 'email'
+          })]
         );
       } catch (logErr) {
         console.error('❌ Failed to log password reset request:', logErr);
@@ -259,6 +286,21 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       
     } else {
       console.log(`❌ Password reset requested for non-existent email: ${email}`);
+      
+      // ✅ ENHANCED: Log failed password reset attempts
+      try {
+        await db.query(
+          'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+          [null, 'Failed password reset attempt', JSON.stringify({
+            email: email,
+            reason: 'email_not_found',
+            ip_address: req.ip || req.connection?.remoteAddress,
+            user_agent: req.get('User-Agent')
+          })]
+        );
+      } catch (logErr) {
+        console.error('❌ Failed to log failed password reset:', logErr);
+      }
     }
   } catch (err) {
     console.error('❌ Forgot password error:', err);
@@ -301,11 +343,16 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Log the password reset
+    // ✅ ENHANCED: Log the password reset completion with details
     try {
       await db.query(
-        'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
-        [user.id, 'Password reset completed']
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [user.id, 'Password reset completed', JSON.stringify({
+          username: user.username,
+          reset_method: 'email_link',
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
       );
     } catch (logErr) {
       console.error('❌ Failed to log password reset:', logErr);
@@ -387,6 +434,13 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
   }
 
   try {
+    // ✅ ENHANCED: Get current user data for detailed logging
+    const currentUserResult = await db.query(
+      'SELECT username, email, phone, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+    const currentUser = currentUserResult.rows[0];
+
     // Check if new email/username is already taken by another user
     const existingUser = await db.query(
       'SELECT id FROM users WHERE (email = $1 OR username = $2) AND id != $3',
@@ -412,11 +466,22 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
 
     console.log('✅ Profile updated successfully');
     
-    // Log the profile update
+    // ✅ ENHANCED: Log the profile update with detailed changes
     try {
+      const changes = {};
+      if (currentUser.username !== username) changes.username = { old: currentUser.username, new: username };
+      if (currentUser.email !== email) changes.email = { old: currentUser.email, new: email };
+      if (currentUser.phone !== phone) changes.phone = { old: currentUser.phone, new: phone };
+      if (currentUser.full_name !== full_name) changes.full_name = { old: currentUser.full_name, new: full_name };
+
       await db.query(
-        'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
-        [userId, 'Profile updated']
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Profile updated', JSON.stringify({
+          changes: changes,
+          fields_changed: Object.keys(changes),
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
       );
     } catch (logErr) {
       console.error('❌ Failed to log profile update:', logErr);
@@ -460,6 +525,22 @@ app.post('/api/user/change-password', authenticateToken, async (req, res) => {
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) {
       console.log('❌ Invalid current password for user:', userId);
+      
+      // ✅ ENHANCED: Log failed password change attempts
+      try {
+        await db.query(
+          'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+          [userId, 'Failed password change attempt', JSON.stringify({
+            username: user.username,
+            reason: 'incorrect_current_password',
+            ip_address: req.ip || req.connection?.remoteAddress,
+            user_agent: req.get('User-Agent')
+          })]
+        );
+      } catch (logErr) {
+        console.error('❌ Failed to log failed password change:', logErr);
+      }
+      
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
@@ -469,11 +550,16 @@ app.post('/api/user/change-password', authenticateToken, async (req, res) => {
     // Update password
     await db.query('UPDATE users SET password = $1 WHERE id = $2', [newPasswordHash, userId]);
 
-    // Log the password change
+    // ✅ ENHANCED: Log successful password change with details
     try {
       await db.query(
-        'INSERT INTO logs (user_id, activity) VALUES ($1, $2)',
-        [userId, 'Password changed']
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Password changed', JSON.stringify({
+          username: user.username,
+          change_method: 'user_initiated',
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
       );
     } catch (logErr) {
       console.error('❌ Failed to log password change:', logErr);
@@ -501,6 +587,7 @@ app.listen(PORT, () => {
   console.log('✅ Password reset emails with beautiful HTML templates');
   console.log('🎉 Welcome emails for new registrations');
   console.log('✅ Profile management endpoints loaded');
+  console.log('📝 Enhanced logging system enabled');
   console.log('✅ All routes loaded successfully');
   console.log('=====================================');
   console.log('🌐 API Base URL: http://localhost:' + PORT);

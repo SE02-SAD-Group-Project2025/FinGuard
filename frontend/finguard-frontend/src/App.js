@@ -16,6 +16,7 @@ import Register from './components/register';
 import AdminDashboard from './components/AdminDashboard';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
+import TransactionsPage from './components/TransactionsPage';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         {/* 🛡️ ADMIN-ONLY Protected Route */}
         <Route path="/admin/AdminDashboard" element={<PrivateRoute requireAdmin={true}><AdminDashboard /></PrivateRoute>} />
+        <Route path="/transactions" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
       </Routes>
 
         </main>

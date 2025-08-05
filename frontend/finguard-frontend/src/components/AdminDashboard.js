@@ -1,6 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import AdminNavbar from './AdminNavbar';
-import { Users, ClipboardList, FolderCog, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import { 
+  Users, 
+  ClipboardList, 
+  FolderCog, 
+  Trash2, 
+  AlertCircle, 
+  RefreshCw,
+  Search,
+  Filter,
+  Calendar,
+  BarChart3,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  User,
+  Shield,
+  Clock,
+  Activity,
+  Download,
+  X,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import AdminSummaryCards from './AdminSummaryCards';
 import UserActivityChart from './UserActivityChart';
 
@@ -10,9 +32,25 @@ const AdminDashboard = () => {
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [logStats, setLogStats] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Enhanced logs state
+  const [logFilters, setLogFilters] = useState({
+    username: '',
+    activity: '',
+    startDate: '',
+    endDate: '',
+    page: 1,
+    limit: 20,
+    sortBy: 'timestamp',
+    sortOrder: 'DESC'
+  });
+  const [logPagination, setLogPagination] = useState({});
+  const [expandedLogs, setExpandedLogs] = useState(new Set());
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // API base URL
   const API_BASE = 'http://localhost:5000';
@@ -55,7 +93,7 @@ const AdminDashboard = () => {
           'Authorization': `Bearer ${token}`,
           ...options.headers,
         },
-        credentials: 'include', // Include credentials for CORS
+        credentials: 'include',
         ...options,
       });
 
@@ -74,7 +112,7 @@ const AdminDashboard = () => {
           errorMessage = 'Access denied. Admin privileges required.';
         } else if (response.status === 401) {
           errorMessage = 'Authentication failed. Please login again.';
-          localStorage.removeItem('finguard-token'); // Remove invalid token
+          localStorage.removeItem('finguard-token');
         }
         
         throw new Error(errorMessage);
@@ -94,6 +132,64 @@ const AdminDashboard = () => {
       
       throw error;
     }
+  };
+
+  // Get activity icon
+  const getActivityIcon = (activity) => {
+    const icons = {
+      'logged in': '🔑',
+      'logged out': '🚪',
+      'registered': '✨',
+      'failed login': '❌',
+      'password': '🔒',
+      'profile': '👤',
+      'transaction': '💰',
+      'income': '💚',
+      'expense': '💸',
+      'budget': '📊',
+      'banned': '🚫',
+      'unbanned': '✅',
+      'role': '👑',
+      'admin': '🛡️',
+      'alert': '🚨',
+      'security': '🔐',
+      'category': '📁',
+      'added': '➕',
+      'updated': '✏️',
+      'deleted': '🗑️',
+      'completed': '✅',
+      'attempt': '⚠️',
+      'reset': '🔄'
+    };
+
+    const activityLower = activity.toLowerCase();
+    for (const [key, icon] of Object.entries(icons)) {
+      if (activityLower.includes(key)) {
+        return icon;
+      }
+    }
+    return '📝';
+  };
+
+  // Get activity color class
+  const getActivityColor = (activity) => {
+    const activityLower = activity.toLowerCase();
+    if (activityLower.includes('failed') || activityLower.includes('banned') || activityLower.includes('blocked') || activityLower.includes('attempt')) {
+      return 'text-red-600 bg-red-50 border-red-200';
+    } else if (activityLower.includes('logged in') || activityLower.includes('registered') || activityLower.includes('unbanned') || activityLower.includes('added') || activityLower.includes('completed')) {
+      return 'text-green-600 bg-green-50 border-green-200';
+    } else if (activityLower.includes('admin') || activityLower.includes('role')) {
+      return 'text-purple-600 bg-purple-50 border-purple-200';
+    } else if (activityLower.includes('alert') || activityLower.includes('budget')) {
+      return 'text-orange-600 bg-orange-50 border-orange-200';
+    } else if (activityLower.includes('password') || activityLower.includes('security')) {
+      return 'text-blue-600 bg-blue-50 border-blue-200';
+    } else if (activityLower.includes('updated') || activityLower.includes('changed')) {
+      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    } else if (activityLower.includes('deleted')) {
+      return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+    return 'text-gray-600 bg-gray-50 border-gray-200';
   };
 
   // Fetch users from backend
@@ -116,21 +212,113 @@ const AdminDashboard = () => {
     }
   };
 
-  // Fetch logs from backend
-  const fetchLogs = async () => {
+  // Enhanced fetch logs with filters
+  const fetchLogs = async (filters = logFilters) => {
     try {
       setLoading(true);
       setError('');
-      console.log('🔄 Fetching logs...');
-      
-      const data = await apiCall('/admin/logs');
+      console.log('🔄 Fetching logs with filters:', filters);
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+
+      const data = await apiCall(`/admin/logs?${params.toString()}`);
       if (data) {
         console.log('📜 Logs fetched:', data);
-        setLogs(Array.isArray(data) ? data : []);
+        setLogs(Array.isArray(data.logs) ? data.logs : []);
+        setLogPagination(data.pagination || {});
       }
     } catch (error) {
       console.error('❌ Error fetching logs:', error);
       setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch log statistics
+  const fetchLogStats = async (timeframe = '30d') => {
+    try {
+      console.log('🔄 Fetching log stats...');
+      
+      const data = await apiCall(`/admin/logs/stats?timeframe=${timeframe}`);
+      if (data) {
+        console.log('📊 Log stats fetched:', data);
+        setLogStats(data);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching log stats:', error);
+      setLogStats({});
+    }
+  };
+
+  // Handle log filter changes
+  const handleFilterChange = (key, value) => {
+    const newFilters = { ...logFilters, [key]: value, page: 1 };
+    setLogFilters(newFilters);
+    
+    // Debounce API calls for text inputs
+    if (key === 'username' || key === 'activity') {
+      clearTimeout(window.filterTimeout);
+      window.filterTimeout = setTimeout(() => {
+        fetchLogs(newFilters);
+      }, 500);
+    } else {
+      fetchLogs(newFilters);
+    }
+  };
+
+  // Handle pagination
+  const handlePageChange = (newPage) => {
+    const newFilters = { ...logFilters, page: newPage };
+    setLogFilters(newFilters);
+    fetchLogs(newFilters);
+  };
+
+  // Toggle log details
+  const toggleLogDetails = (logId) => {
+    const newExpanded = new Set(expandedLogs);
+    if (newExpanded.has(logId)) {
+      newExpanded.delete(logId);
+    } else {
+      newExpanded.add(logId);
+    }
+    setExpandedLogs(newExpanded);
+  };
+
+  // Export logs
+  const exportLogs = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({ ...logFilters, limit: 10000 });
+      const data = await apiCall(`/admin/logs?${params.toString()}`);
+      
+      if (data && data.logs) {
+        const csvContent = [
+          ['Timestamp', 'Username', 'Activity', 'Details'],
+          ...data.logs.map(log => [
+            new Date(log.timestamp).toLocaleString(),
+            log.username || 'System',
+            log.activity,
+            log.details ? JSON.stringify(log.details) : ''
+          ])
+        ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `finguard-logs-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        setSuccess('Logs exported successfully');
+      }
+    } catch (error) {
+      setError('Failed to export logs');
     } finally {
       setLoading(false);
     }
@@ -179,7 +367,7 @@ const AdminDashboard = () => {
       
       setSuccess('Category added successfully');
       setNewCategory('');
-      fetchCategories(); // Refresh the list
+      fetchCategories();
     } catch (error) {
       console.error('❌ Error adding category:', error);
     }
@@ -200,7 +388,7 @@ const AdminDashboard = () => {
       });
       
       setSuccess('Category deleted successfully');
-      fetchCategories(); // Refresh the list
+      fetchCategories();
     } catch (error) {
       console.error('❌ Error deleting category:', error);
     }
@@ -218,7 +406,7 @@ const AdminDashboard = () => {
       });
 
       setSuccess(`User ${!isBanned ? 'banned' : 'unbanned'} successfully`);
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (error) {
       console.error('❌ Error banning/unbanning user:', error);
     }
@@ -236,7 +424,7 @@ const AdminDashboard = () => {
       });
 
       setSuccess('User role updated successfully');
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (error) {
       console.error('❌ Error updating user role:', error);
     }
@@ -248,8 +436,7 @@ const AdminDashboard = () => {
       fetchUsers();
     } else if (activeTab === 'logs') {
       fetchLogs();
-    } else if (activeTab === 'categories') {
-      fetchCategories();
+      fetchLogStats();
     }
   };
 
@@ -257,6 +444,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     console.log(`🔄 Tab changed to: ${activeTab}`);
     refreshData();
+  }, [activeTab]);
+
+  // Load log stats when logs tab is active
+  useEffect(() => {
+    if (activeTab === 'logs') {
+      fetchLogStats();
+    }
   }, [activeTab]);
 
   // Error/Success Message Component
@@ -284,9 +478,9 @@ const AdminDashboard = () => {
         {/* Summary Cards */}
         <AdminSummaryCards 
           userCount={users.length} 
-          logCount={logs.length} 
+          logCount={logStats.overview?.totalLogs || 0} 
           adminCount={users.filter(user => user.role === 'Admin').length} 
-          issueCount={6} 
+          issueCount={logStats.overview?.securityEvents || 0} 
         />
 
         {/* Global Error/Success Messages */}
@@ -297,7 +491,7 @@ const AdminDashboard = () => {
         <div className="flex flex-wrap gap-4 mb-6">
           {[
             { id: 'users', label: 'Manage Users', icon: <Users className="w-4 h-4" /> },
-            { id: 'logs', label: 'View Logs', icon: <ClipboardList className="w-4 h-4" /> },
+            { id: 'logs', label: 'System Logs', icon: <ClipboardList className="w-4 h-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -403,83 +597,374 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* View Logs */}
+          {/* Enhanced System Logs */}
           {activeTab === 'logs' && !loading && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">System Activity Logs ({logs.length} entries)</h2>
-              {logs.length === 0 ? (
-                <div className="text-center py-8">
-                  <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No logs found</p>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold">System Activity Logs</h2>
+                  <p className="text-sm text-gray-600">
+                    Total: {logPagination.total || 0} entries • 
+                    Page {logPagination.page || 1} of {logPagination.totalPages || 1}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {logs.map((log) => (
-                    <div key={log.id} className="p-3 border border-gray-200 rounded bg-gray-50">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <strong className="text-gray-900">{log.activity}</strong>
-                          <p className="text-sm text-gray-600 mt-1">
-                            User: {log.username || 'System'}
-                          </p>
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          {new Date(log.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Manage Categories */}
-          {activeTab === 'categories' && !loading && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Category Management ({categories.length} categories)</h2>
-              
-              {/* Add Category Form */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium mb-3">Add New Category</h3>
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="border border-gray-300 px-4 py-2 rounded-lg flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter category name"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
-                  />
                   <button
-                    onClick={handleAddCategory}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    onClick={exportLogs}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                   >
-                    Add
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Filter className="w-4 h-4" />
+                    {showAdvancedFilters ? 'Hide' : 'Show'} Filters
                   </button>
                 </div>
               </div>
 
-              {/* Categories List */}
-              {categories.length === 0 ? (
+              {/* Log Statistics */}
+              {logStats.overview && (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-blue-600" />
+                      <span className="text-blue-700 font-medium">Total Logs</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-800">{logStats.overview.totalLogs}</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-green-600" />
+                      <span className="text-green-700 font-medium">Active Users</span>
+                    </div>
+                    <p className="text-2xl font-bold text-green-800">{logStats.overview.activeUsers}</p>
+                  </div>
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-orange-600" />
+                      <span className="text-orange-700 font-medium">24h Activity</span>
+                    </div>
+                    <p className="text-2xl font-bold text-orange-800">{logStats.overview.recentActivity}</p>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-red-600" />
+                      <span className="text-red-700 font-medium">Security Events</span>
+                    </div>
+                    <p className="text-2xl font-bold text-red-800">{logStats.overview.securityEvents}</p>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-purple-600" />
+                      <span className="text-purple-700 font-medium">Admin Actions</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-800">{logStats.overview.adminActions || 0}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Advanced Filters */}
+              {showAdvancedFilters && (
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                      <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search username..."
+                          value={logFilters.username}
+                          onChange={(e) => handleFilterChange('username', e.target.value)}
+                          className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Activity</label>
+                      <input
+                        type="text"
+                        placeholder="Search activity..."
+                        value={logFilters.activity}
+                        onChange={(e) => handleFilterChange('activity', e.target.value)}
+                        className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                      <input
+                        type="datetime-local"
+                        value={logFilters.startDate}
+                        onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                        className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                      <input
+                        type="datetime-local"
+                        value={logFilters.endDate}
+                        onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                        className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setLogFilters({
+                          username: '',
+                          activity: '',
+                          startDate: '',
+                          endDate: '',
+                          page: 1,
+                          limit: 20,
+                          sortBy: 'timestamp',
+                          sortOrder: 'DESC'
+                        });
+                        fetchLogs({
+                          username: '',
+                          activity: '',
+                          startDate: '',
+                          endDate: '',
+                          page: 1,
+                          limit: 20,
+                          sortBy: 'timestamp',
+                          sortOrder: 'DESC'
+                        });
+                      }}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                    >
+                      <X className="w-4 h-4 inline mr-2" />
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Logs List */}
+              {logs.length === 0 ? (
                 <div className="text-center py-8">
-                  <FolderCog className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No categories found</p>
+                  <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No logs found</p>
+                  <button onClick={() => fetchLogs()} className="mt-2 text-blue-600 hover:text-blue-800">
+                    Try refreshing
+                  </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {categories.map((category) => (
-                    <div key={category.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
-                      <span className="font-medium text-gray-900">{category.name}</span>
-                      <button
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
-                        title="Delete category"
+                <div className="space-y-3">
+                  {logs.map((log) => (
+                    <div key={log.id} className={`border rounded-lg transition-all ${getActivityColor(log.activity)}`}>
+                      <div 
+                        className="p-4 cursor-pointer hover:bg-opacity-75"
+                        onClick={() => toggleLogDetails(log.id)}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="text-2xl mt-1">
+                              {getActivityIcon(log.activity)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-gray-900">
+                                  {log.activity}
+                                </span>
+                                {log.details?.admin_action && (
+                                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                                    Admin Action
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">
+                                <span className="font-medium">User:</span> {log.username || 'System'} 
+                                {log.role && (
+                                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    {log.role}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(log.timestamp).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ml-4 flex items-center gap-2">
+                            {expandedLogs.has(log.id) ? (
+                              <ChevronUp className="w-5 h-5 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {expandedLogs.has(log.id) && log.details && (
+                        <div className="border-t bg-gray-50 p-4">
+                          <h4 className="font-medium text-gray-900 mb-3">Activity Details</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            {Object.entries(log.details).map(([key, value]) => {
+                              if (typeof value === 'object' && value !== null) {
+                                return (
+                                  <div key={key} className="bg-white p-3 rounded border">
+                                    <span className="font-medium text-gray-700 capitalize">
+                                      {key.replace(/_/g, ' ')}:
+                                    </span>
+                                    <pre className="mt-1 text-gray-600 text-xs overflow-x-auto">
+                                      {JSON.stringify(value, null, 2)}
+                                    </pre>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={key} className="bg-white p-3 rounded border">
+                                  <span className="font-medium text-gray-700 capitalize">
+                                    {key.replace(/_/g, ' ')}:
+                                  </span>
+                                  <p className="mt-1 text-gray-600">{String(value)}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {logPagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="text-sm text-gray-600">
+                    Showing {((logPagination.page - 1) * logFilters.limit) + 1} to{' '}
+                    {Math.min(logPagination.page * logFilters.limit, logPagination.total)} of{' '}
+                    {logPagination.total} entries
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(logPagination.page - 1)}
+                      disabled={!logPagination.hasPrev}
+                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Previous
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                      {[...Array(Math.min(5, logPagination.totalPages))].map((_, idx) => {
+                        const pageNum = logPagination.page - 2 + idx;
+                        if (pageNum < 1 || pageNum > logPagination.totalPages) return null;
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`px-3 py-2 rounded-lg ${
+                              pageNum === logPagination.page
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => handlePageChange(logPagination.page + 1)}
+                      disabled={!logPagination.hasNext}
+                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Top Activities and Users */}
+              {logStats.topActivities && logStats.topUsers && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                  {/* Top Activities */}
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-blue-600" />
+                      Top Activities
+                    </h3>
+                    <div className="space-y-3">
+                      {logStats.topActivities.slice(0, 8).map((activity, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getActivityIcon(activity.activity)}</span>
+                            <span className="text-sm font-medium text-gray-700">
+                              {activity.activity}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full"
+                                style={{ 
+                                  width: `${(activity.count / logStats.topActivities[0].count) * 100}%` 
+                                }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900 w-8 text-right">
+                              {activity.count}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Users */}
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Users className="w-5 h-5 text-green-600" />
+                      Most Active Users
+                    </h3>
+                    <div className="space-y-3">
+                      {logStats.topUsers.slice(0, 8).map((user, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                              {user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">
+                                {user.username}
+                              </span>
+                              {user.role && (
+                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                  {user.role}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full"
+                                style={{ 
+                                  width: `${(user.activity_count / logStats.topUsers[0].activity_count) * 100}%` 
+                                }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900 w-8 text-right">
+                              {user.activity_count}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

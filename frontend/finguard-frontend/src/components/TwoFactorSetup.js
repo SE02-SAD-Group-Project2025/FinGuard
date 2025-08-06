@@ -141,6 +141,37 @@ const TwoFactorSetup = () => {
     });
   };
 
+  // Generate new backup codes
+  const generateBackupCodes = async (password) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('finguard-token');
+      const response = await fetch('http://localhost:5000/api/2fa/backup-codes', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`New backup codes generated:\n\n${data.backup_codes.join('\n')}\n\nPlease save these codes in a secure location.`);
+        checkTwoFAStatus(); // Refresh status
+      } else {
+        setError(data.error || 'Failed to generate backup codes');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (twoFAStatus === null) {
     return (
       <AnimatedPage>
@@ -204,10 +235,12 @@ const TwoFactorSetup = () => {
 
               <div className="space-y-3">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const password = prompt('Enter your password to generate new backup codes:');
                     if (password) {
-                      generateBackupCodes(password);
+                      await generateBackupCodes(password);
+                      // Force refresh the 2FA status after generating backup codes
+                      checkTwoFAStatus();
                     }
                   }}
                   className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -216,11 +249,13 @@ const TwoFactorSetup = () => {
                 </button>
                 
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const password = prompt('Enter your password to disable 2FA:');
                     const token = prompt('Enter a verification code from your authenticator app:');
                     if (password && token) {
-                      disable2FA(password, token);
+                      await disable2FA(password, token);
+                      // Force refresh the 2FA status after disable
+                      checkTwoFAStatus();
                     }
                   }}
                   className="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
@@ -234,37 +269,6 @@ const TwoFactorSetup = () => {
       </AnimatedPage>
     );
   }
-
-  // Generate new backup codes
-  const generateBackupCodes = async (password) => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const token = localStorage.getItem('finguard-token');
-      const response = await fetch('http://localhost:5000/api/2fa/backup-codes', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert(`New backup codes generated:\n\n${data.backup_codes.join('\n')}\n\nPlease save these codes in a secure location.`);
-        checkTwoFAStatus(); // Refresh status
-      } else {
-        setError(data.error || 'Failed to generate backup codes');
-      }
-    } catch (err) {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Main setup flow
   return (

@@ -109,8 +109,22 @@ exports.verify2FA = async (req, res) => {
     return res.status(400).json({ error: 'Verification token is required' });
   }
   
-  // Ensure token is a string
-  const tokenString = String(token).trim();
+  // Ensure token is a clean string - remove any quotes or extra characters
+  let tokenString = String(token).trim();
+  
+  // Remove surrounding quotes if present (in case JSON parsing issues)
+  if ((tokenString.startsWith('"') && tokenString.endsWith('"')) || 
+      (tokenString.startsWith("'") && tokenString.endsWith("'"))) {
+    tokenString = tokenString.slice(1, -1);
+  }
+  
+  // Ensure it's only digits
+  tokenString = tokenString.replace(/\D/g, '');
+  
+  // Validate token length
+  if (tokenString.length !== 6) {
+    return res.status(400).json({ error: 'Verification token must be 6 digits' });
+  }
   
   try {
     // Get user's 2FA secret
@@ -218,29 +232,64 @@ exports.verify2FALogin = async (req, res) => {
     let usedBackupCode = false;
     
     if (backup_code) {
-      // Verify backup code
-      const backupCodes = JSON.parse(user.backup_codes || '[]');
-      const codeIndex = backupCodes.findIndex(code => 
-        code.toLowerCase() === backup_code.toLowerCase()
-      );
+      // Clean backup code input
+      const cleanBackupCode = String(backup_code).trim().toUpperCase();
       
-      if (codeIndex !== -1) {
-        verified = true;
-        usedBackupCode = true;
+      try {
+        // Verify backup code with better error handling
+        let backupCodes = [];
         
-        // Remove used backup code
-        backupCodes.splice(codeIndex, 1);
-        await pool.query(
-          'UPDATE user_2fa SET backup_codes = $1 WHERE user_id = $2',
-          [JSON.stringify(backupCodes), user.id]
+        if (user.backup_codes) {
+          if (typeof user.backup_codes === 'string') {
+            backupCodes = JSON.parse(user.backup_codes);
+          } else if (Array.isArray(user.backup_codes)) {
+            backupCodes = user.backup_codes;
+          }
+        }
+        
+        const codeIndex = backupCodes.findIndex(code => 
+          String(code).trim().toUpperCase() === cleanBackupCode
         );
+        
+        if (codeIndex !== -1) {
+          verified = true;
+          usedBackupCode = true;
+          
+          // Remove used backup code
+          backupCodes.splice(codeIndex, 1);
+          await pool.query(
+            'UPDATE user_2fa SET backup_codes = $1 WHERE user_id = $2',
+            [JSON.stringify(backupCodes), user.id]
+          );
+        }
+      } catch (parseError) {
+        console.error('Error parsing backup codes:', parseError);
+        console.error('Backup codes data:', user.backup_codes);
+        return res.status(500).json({ error: 'Error processing backup codes' });
       }
     } else if (token) {
+      // Clean the token string similar to verify2FA function
+      let tokenString = String(token).trim();
+      
+      // Remove surrounding quotes if present (in case JSON parsing issues)
+      if ((tokenString.startsWith('"') && tokenString.endsWith('"')) || 
+          (tokenString.startsWith("'") && tokenString.endsWith("'"))) {
+        tokenString = tokenString.slice(1, -1);
+      }
+      
+      // Ensure it's only digits
+      tokenString = tokenString.replace(/\D/g, '');
+      
+      // Validate token length
+      if (tokenString.length !== 6) {
+        return res.status(400).json({ error: 'Verification token must be 6 digits' });
+      }
+      
       // Verify TOTP token
       verified = speakeasy.totp.verify({
         secret: user.secret,
         encoding: 'base32',
-        token: token,
+        token: tokenString,
         window: 1
       });
     }

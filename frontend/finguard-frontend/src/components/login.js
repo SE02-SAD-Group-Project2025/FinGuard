@@ -144,8 +144,18 @@ function Login() {
   const handle2FAVerification = async (e) => {
     e.preventDefault();
     
-    if (!twoFactorCode || twoFactorCode.length !== 6) {
+    if (!twoFactorCode) {
+      setErrors({ twoFactor: useBackupCode ? 'Please enter a backup code' : 'Please enter a 6-digit verification code' });
+      return;
+    }
+    
+    if (!useBackupCode && twoFactorCode.length !== 6) {
       setErrors({ twoFactor: 'Please enter a 6-digit verification code' });
+      return;
+    }
+    
+    if (useBackupCode && twoFactorCode.length !== 8) {
+      setErrors({ twoFactor: 'Please enter an 8-character backup code' });
       return;
     }
 
@@ -345,7 +355,16 @@ function Login() {
                 <input
                   type="text"
                   value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, useBackupCode ? 8 : 6))}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (useBackupCode) {
+                      // Allow alphanumeric characters for backup codes, convert to uppercase
+                      setTwoFactorCode(value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase());
+                    } else {
+                      // Only digits for verification codes
+                      setTwoFactorCode(value.replace(/\D/g, '').slice(0, 6));
+                    }
+                  }}
                   placeholder={useBackupCode ? 'Enter backup code' : '000000'}
                   className="form-input"
                   style={{textAlign: 'center', fontSize: '18px', letterSpacing: '4px', fontFamily: 'monospace'}}

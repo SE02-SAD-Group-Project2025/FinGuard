@@ -17,6 +17,10 @@ import AdminDashboard from './components/AdminDashboard';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import TransactionsPage from './components/TransactionsPage';
+import ReportsPage from './components/ReportsPage';
+import LiabilitiesPage from './components/LiabilitiesPage';
+import TwoFactorSetup from './components/TwoFactorSetup';
+
 
 function App() {
   return (
@@ -37,6 +41,10 @@ function App() {
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+        <Route path="/liabilities" element={<PrivateRoute><LiabilitiesPage /></PrivateRoute>} />
+        <Route path="/2fa-setup" element={<PrivateRoute><TwoFactorSetup /></PrivateRoute>} />
+
         {/* 🛡️ ADMIN-ONLY Protected Route */}
         <Route path="/admin/AdminDashboard" element={<PrivateRoute requireAdmin={true}><AdminDashboard /></PrivateRoute>} />
         <Route path="/transactions" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Cards = ({ summary }) => {
+const Cards = ({ summary, liabilitiesSummary }) => {
   const cardData = [
     {
       icon: '💰',
@@ -10,9 +10,9 @@ const Cards = ({ summary }) => {
       textColor: 'text-green-700',
     },
     {
-      icon: '😟',
+      icon: '📉',
       title: 'Liabilities',
-      amount: 'Rs.0.00', // Placeholder until liabilities are implemented
+      amount: `Rs.${liabilitiesSummary?.total_current_balance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`,
       bgColor: 'bg-red-100',
       textColor: 'text-red-700',
     },

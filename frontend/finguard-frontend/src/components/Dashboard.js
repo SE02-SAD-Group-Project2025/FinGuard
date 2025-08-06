@@ -1,4 +1,4 @@
-// Dashboard.js (Backend connected + Improved Design)
+// Dashboard.js (Backend connected + Improved Design + Liabilities Fix)
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import {
@@ -52,13 +52,14 @@ const Dashboard = () => {
   const [incomeChartData, setIncomeChartData] = useState(null);
   const [summary, setSummary] = useState({ income: 0, expenses: 0, balance: 0 });
   const [transactions, setTransactions] = useState([]);
+  const [liabilitiesSummary, setLiabilitiesSummary] = useState({ total_current_balance: 0 });
   const [loading, setLoading] = useState(true);
 
   const token = localStorage.getItem('finguard-token');
   const month = new Date().getMonth() + 1;
   const year = new Date().getFullYear();
 
-  // 🔄 Keep all original backend data fetching logic
+  // 🔄 Keep all original backend data fetching logic + Add liabilities
   useEffect(() => {
     const headers = {
       'Content-Type': 'application/json',
@@ -83,6 +84,22 @@ const Dashboard = () => {
         const transactionsData = await transactionsResponse.json();
         console.log("Fetched transactions:", transactionsData);
         setTransactions(transactionsData);
+        
+        // ✅ FIXED: Fetch Liabilities Summary
+        try {
+          const liabilitiesResponse = await fetch(`http://localhost:5000/api/liabilities/summary`, { headers });
+          if (liabilitiesResponse.ok) {
+            const liabilitiesData = await liabilitiesResponse.json();
+            setLiabilitiesSummary(liabilitiesData.summary || { total_current_balance: 0 });
+            console.log("✅ Liabilities summary fetched:", liabilitiesData.summary);
+          } else {
+            console.log("⚠️ Liabilities endpoint not available, using default values");
+            setLiabilitiesSummary({ total_current_balance: 0 });
+          }
+        } catch (liabErr) {
+          console.log("⚠️ Error fetching liabilities, using default values:", liabErr);
+          setLiabilitiesSummary({ total_current_balance: 0 });
+        }
 
         // ✨ Enhanced chart data processing with better colors
         const incomeGroups = transactionsData
@@ -164,8 +181,8 @@ const Dashboard = () => {
         {/* 🎯 Keep original welcome message but make it dynamic */}
         <h1 className="text-3xl font-bold text-gray-900">Welcome back!</h1>
         
-        {/* 🔄 Keep original Cards and Buttons components */}
-        <Cards summary={summary} />
+        {/* 🔄 Pass liabilities summary to Cards component */}
+        <Cards summary={summary} liabilitiesSummary={liabilitiesSummary} />
         <Buttons />
 
         {/* ✨ Improved section title */}

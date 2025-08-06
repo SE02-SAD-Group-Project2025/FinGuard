@@ -90,8 +90,8 @@ const Navbar = () => {
             <img src={logo} alt="FinGuard Logo" className="h-14 w-auto rounded-md" />
           </div>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
+          {/* Desktop Menu - Updated with Liabilities and Reports */}
+          <div className="hidden md:flex items-center space-x-4">
             <button 
               onClick={() => handleNavigation('/dashboard')} 
               className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
@@ -101,12 +101,44 @@ const Navbar = () => {
               Dashboard
             </button>
             <button 
+              onClick={() => handleNavigation('/expense')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/expense' ? 'bg-green-200' : ''
+              }`}
+            >
+              Expenses
+            </button>
+            <button 
+              onClick={() => handleNavigation('/income')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/income' ? 'bg-green-200' : ''
+              }`}
+            >
+              Income
+            </button>
+            <button 
+              onClick={() => handleNavigation('/liabilities')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/liabilities' ? 'bg-green-200' : ''
+              }`}
+            >
+              Liabilities
+            </button>
+            <button 
               onClick={() => handleNavigation('/budget')} 
               className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
                 location.pathname === '/budget' ? 'bg-green-200' : ''
               }`}
             >
               Budget
+            </button>
+            <button 
+              onClick={() => handleNavigation('/reports')} 
+              className={`text-black hover:bg-green-200 px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/reports' ? 'bg-green-200' : ''
+              }`}
+            >
+              Reports
             </button>
             <button 
               onClick={() => handleNavigation('/profile')} 
@@ -162,7 +194,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Updated with Liabilities and Reports */}
         {isOpen && (
           <div className="md:hidden bg-green-100">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -175,12 +207,44 @@ const Navbar = () => {
                 Dashboard
               </button>
               <button 
+                onClick={() => handleNavigation('/expense')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/expense' ? 'bg-green-200' : ''
+                }`}
+              >
+                Expenses
+              </button>
+              <button 
+                onClick={() => handleNavigation('/income')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/income' ? 'bg-green-200' : ''
+                }`}
+              >
+                Income
+              </button>
+              <button 
+                onClick={() => handleNavigation('/liabilities')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/liabilities' ? 'bg-green-200' : ''
+                }`}
+              >
+                Liabilities
+              </button>
+              <button 
                 onClick={() => handleNavigation('/budget')} 
                 className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
                   location.pathname === '/budget' ? 'bg-green-200' : ''
                 }`}
               >
                 Budget
+              </button>
+              <button 
+                onClick={() => handleNavigation('/reports')} 
+                className={`text-black block hover:bg-green-200 px-3 py-2 rounded-md text-base font-medium w-full text-left ${
+                  location.pathname === '/reports' ? 'bg-green-200' : ''
+                }`}
+              >
+                Reports
               </button>
               <button 
                 onClick={() => handleNavigation('/profile')} 

@@ -108,6 +108,14 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Check if user has 2FA enabled
+    if (user.two_factor_enabled) {
+      return res.json({ 
+        requires2FA: true,
+        message: 'Please provide your 2FA code to complete login'
+      });
+    }
+
     const token = jwt.sign(
       {
         userId: user.id,
@@ -143,5 +151,75 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+// Complete login after 2FA verification
+const complete2FALogin = async (req, res) => {
+  const { email, token, backup_code } = req.body;
+  
+  if (!email || (!token && !backup_code)) {
+    return res.status(400).json({ 
+      error: 'Email and either token or backup code are required' 
+    });
+  }
+  
+  try {
+    // Verify 2FA first using the existing controller
+    const twoFactorController = require('./twoFactorController');
+    
+    // Create a mock request/response for the 2FA verification
+    const mockReq = { body: { email, token, backup_code }, ip: req.ip, get: req.get.bind(req) };
+    let verificationResult = null;
+    
+    const mockRes = {
+      json: (data) => { verificationResult = data; },
+      status: (code) => ({ json: (data) => { verificationResult = { error: data.error, status: code }; } })
+    };
+    
+    await twoFactorController.verify2FALogin(mockReq, mockRes);
+    
+    if (verificationResult.error) {
+      return res.status(verificationResult.status || 400).json({ error: verificationResult.error });
+    }
+    
+    // Get user data after successful 2FA verification
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    
+    // Generate JWT token
+    const jwtToken = jwt.sign(
+      {
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Log successful 2FA login
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [user.id, 'User logged in with 2FA', JSON.stringify({
+          username: user.username,
+          role: user.role,
+          login_method: '2fa',
+          backup_code_used: !!backup_code,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log('✅ 2FA login log created for user:', user.username);
+    } catch (logErr) {
+      console.error('❌ Failed to log 2FA login:', logErr);
+    }
+
+    res.json({ token: jwtToken });
+  } catch (error) {
+    console.error('2FA login completion error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+module.exports = { register, login, complete2FALogin };
 // ✅ Middleware to protect routes

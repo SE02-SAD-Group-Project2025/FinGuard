@@ -43,13 +43,18 @@ const summaryRoutes = require('./routes/summaryRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
+const liabilitiesRoutes = require('./routes/liabilitiesRoutes');
+const twoFactorRoutes = require('./routes/twoFactorRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/summary', summaryRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/admin', adminRoutes);
-
+app.use('/api/reports', reportsRoutes);
+app.use('/api/liabilities', liabilitiesRoutes);
+app.use('/api/2fa', twoFactorRoutes);
 // ================== ENHANCED AUTHENTICATION ENDPOINTS ==================
 
 // Check username availability

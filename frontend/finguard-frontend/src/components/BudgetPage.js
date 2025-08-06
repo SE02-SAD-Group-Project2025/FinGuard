@@ -89,6 +89,33 @@ const BudgetPage = () => {
     }
   };
 
+  // ✅ FIXED: Use same categories as ExpensePage.js
+  const getPredefinedExpenseCategories = () => {
+    return [
+      { id: 1, name: 'Food & Dining' },
+      { id: 2, name: 'Groceries' },
+      { id: 3, name: 'Transportation' },
+      { id: 4, name: 'Entertainment' },
+      { id: 5, name: 'Utilities' },
+      { id: 6, name: 'Shopping' },
+      { id: 7, name: 'Healthcare' },
+      { id: 8, name: 'Education' },
+      { id: 9, name: 'Travel' },
+      { id: 10, name: 'Rent' },
+      { id: 11, name: 'Insurance' },
+      { id: 12, name: 'Phone & Internet' },
+      { id: 13, name: 'Fuel' },
+      { id: 14, name: 'Clothing' },
+      { id: 15, name: 'Personal Care' },
+      { id: 16, name: 'Home Maintenance' },
+      { id: 17, name: 'Subscriptions' },
+      { id: 18, name: 'Other Expenses' }
+    ];
+  };
+
+  // Available categories for budgets - now matches ExpensePage
+  const availableCategories = getPredefinedExpenseCategories().map(cat => cat.name);
+
   // Fetch all budget-related data
   const fetchBudgetData = async () => {
     setLoading(true);
@@ -232,35 +259,32 @@ const BudgetPage = () => {
     closeSavingsModal();
   };
 
-  // Available categories for budgets
-  const availableCategories = [
-    'Food & Dining',
-    'Groceries',
-    'Transportation',
-    'Entertainment',
-    'Utilities',
-    'Shopping',
-    'Healthcare',
-    'Education',
-    'Travel',
-    'Other'
-  ];
-
-  // Get category icon
-  const getCategoryIcon = (category) => {
-    const icons = {
-      'Food & Dining': '🍽️',
-      'Groceries': '🛒',
-      'Transportation': '🚗',
-      'Entertainment': '🎮',
-      'Utilities': '⚡',
-      'Shopping': '🛍️',
-      'Healthcare': '🏥',
-      'Education': '📚',
-      'Travel': '✈️',
-      'Other': '📝'
+  // Get category icon - updated to match ExpensePage
+  const getCategoryIcon = (categoryName) => {
+    const iconMap = {
+      'food': '🍽️', 'dining': '🍽️', 'restaurant': '🍽️',
+      'groceries': '🛒', 'grocery': '🛒', 'food shopping': '🛒',
+      'transportation': '🚗', 'transport': '🚗', 'car': '🚗', 'fuel': '⛽',
+      'entertainment': '🎮', 'movies': '🎬', 'games': '🎮',
+      'utilities': '⚡', 'electricity': '⚡', 'water': '💧', 'gas': '🔥',
+      'shopping': '🛍️', 'clothes': '👕', 'clothing': '👕',
+      'healthcare': '🏥', 'medical': '🏥', 'health': '🏥',
+      'education': '📚', 'books': '📚', 'course': '🎓',
+      'travel': '✈️', 'vacation': '🏖️', 'hotel': '🏨',
+      'rent': '🏠', 'housing': '🏠', 'home': '🏠',
+      'insurance': '🛡️', 'phone': '📱', 'internet': '📡',
+      'personal care': '🧴', 'care': '🧴',
+      'maintenance': '🔧', 'repair': '🔧',
+      'subscription': '📺', 'membership': '📺'
     };
-    return icons[category] || '📝';
+
+    const categoryLower = categoryName.toLowerCase();
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (categoryLower.includes(key)) {
+        return icon;
+      }
+    }
+    return '💸'; // Default expense icon
   };
 
   // Message Alert Component
@@ -306,26 +330,35 @@ const BudgetPage = () => {
               <select
                 value={newBudget.category}
                 onChange={(e) => setNewBudget({...newBudget, category: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select Category</option>
                 {availableCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {getCategoryIcon(cat)} {cat}
+                  </option>
                 ))}
               </select>
               
+              {/* ✅ FIXED: Proper focus handling for budget amount input */}
               <input
                 type="number"
                 placeholder="Budget Limit (LKR)"
                 value={newBudget.limit_amount}
                 onChange={(e) => setNewBudget({...newBudget, limit_amount: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onFocus={(e) => e.target.select()} 
+                onClick={(e) => e.target.focus()}
+                min="0"
+                step="1000"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                autoComplete="off"
+                inputMode="numeric"
               />
               
               <select
                 value={newBudget.month}
                 onChange={(e) => setNewBudget({...newBudget, month: parseInt(e.target.value)})}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {Array.from({length: 12}, (_, i) => (
                   <option key={i+1} value={i+1}>
@@ -336,13 +369,24 @@ const BudgetPage = () => {
               
               <button
                 onClick={handleAddBudget}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+                disabled={loading || !newBudget.category || !newBudget.limit_amount}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
                 Add Budget
               </button>
             </div>
+            
+            {/* Preview of what will be added */}
+            {newBudget.category && newBudget.limit_amount && (
+              <div className="mt-3 p-3 bg-white rounded border border-blue-200">
+                <p className="text-sm text-blue-700">
+                  <strong>Preview:</strong> {getCategoryIcon(newBudget.category)} {newBudget.category} - 
+                  LKR {parseFloat(newBudget.limit_amount || 0).toLocaleString()} for{' '}
+                  {new Date(newBudget.year, newBudget.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Existing Budgets List */}
@@ -357,7 +401,7 @@ const BudgetPage = () => {
               </div>
             ) : (
               budgets.map((budget) => (
-                <div key={budget.id} className="border border-gray-200 rounded-lg p-4">
+                <div key={budget.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
@@ -367,7 +411,7 @@ const BudgetPage = () => {
                           Budget: LKR {parseFloat(budget.limit_amount).toLocaleString()}
                         </p>
                         {budget.alert_triggered && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
                             <Mail className="w-3 h-3 mr-1" />
                             Alert Sent
                           </span>
@@ -377,7 +421,7 @@ const BudgetPage = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleDeleteBudget(budget.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        className="text-red-600 hover:text-red-800 text-sm px-3 py-1 rounded hover:bg-red-50 transition-colors"
                       >
                         Delete
                       </button>
@@ -427,6 +471,8 @@ const BudgetPage = () => {
                 value={savingsGoal.amount}
                 onChange={(e) => setSavingsGoal({ ...savingsGoal, amount: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring focus:ring-blue-200"
+                min="0"
+                step="1"
               />
             </div>
 
@@ -437,6 +483,8 @@ const BudgetPage = () => {
                 value={savingsGoal.saved}
                 onChange={(e) => setSavingsGoal({ ...savingsGoal, saved: parseInt(e.target.value) || 0 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring focus:ring-blue-200"
+                min="0"
+                step="1"
               />
             </div>
 
@@ -491,6 +539,9 @@ const BudgetPage = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 text-left mb-2">Budget Management</h1>
               <p className="text-sm text-gray-600">Track spending, set limits, and receive smart alerts</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Categories: {availableCategories.length} available • Matching ExpensePage categories
+              </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <BarChart3 className="w-4 h-4" />

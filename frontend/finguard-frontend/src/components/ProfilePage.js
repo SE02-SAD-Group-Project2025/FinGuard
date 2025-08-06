@@ -10,7 +10,8 @@ const ProfilePage = () => {
     email: '',
     role: '',
     phone: '',
-    is_banned: false
+    is_banned: false,
+    profile_photo: null
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,9 @@ const ProfilePage = () => {
   });
   const [twoFAStatus, setTwoFAStatus] = useState(null);
   const [loadingTwoFA, setLoadingTwoFA] = useState(true);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Get token for API calls
   const getToken = () => localStorage.getItem('finguard-token');
@@ -96,7 +100,8 @@ const ProfilePage = () => {
       if (profileData && profileData.profile) {
         setUserProfile({
           ...profileData.profile,
-          phone: profileData.profile.phone || '' // Add phone if it exists in DB
+          phone: profileData.profile.phone || '', // Add phone if it exists in DB
+          profile_photo: profileData.profile.profile_photo || null
         });
       }
     } catch (error) {
@@ -227,10 +232,110 @@ const ProfilePage = () => {
     setPasswordData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Handle profile photo selection
+  const handlePhotoSelect = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    setPhotoFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => setPhotoPreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  // Upload profile photo
+  const handlePhotoUpload = async () => {
+    if (!photoFile) return;
+
+    setUploadingPhoto(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('profile_photo', photoFile);
+
+      const token = getToken();
+      const response = await fetch('http://localhost:5000/api/user/upload-photo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Upload failed: ${errorData}`);
+      }
+
+      const data = await response.json();
+      
+      setSuccess('Profile photo updated successfully!');
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      
+      // Refetch profile data to get the updated photo
+      await fetchUserProfile();
+
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      setError('Failed to upload photo: ' + error.message);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // Remove profile photo
+  const handlePhotoRemove = async () => {
+    setUploadingPhoto(true);
+    setError('');
+
+    try {
+      const response = await apiCall('/api/user/remove-photo', {
+        method: 'DELETE'
+      });
+
+      if (response) {
+        setSuccess('Profile photo removed successfully!');
+        // Refetch profile data to get the updated state
+        await fetchUserProfile();
+      }
+    } catch (error) {
+      setError('Failed to remove photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   // Load profile data on component mount
   useEffect(() => {
     fetchUserProfile();
     fetch2FAStatus();
+  }, []);
+
+  // Add listener for when user returns to this page (e.g., from 2FA setup)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh 2FA status when page regains focus
+      fetch2FAStatus();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // Clear messages
@@ -307,16 +412,79 @@ const ProfilePage = () => {
 
             {!loading && (
               <>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className={`w-16 h-16 ${profilePic.bgColor} rounded-full flex items-center justify-center text-xl font-bold text-white`}>
-                    {initials}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="relative group">
+                    {/* Profile Photo or Initials */}
+                    {userProfile.profile_photo || photoPreview ? (
+                      <img 
+                        src={photoPreview || (userProfile.profile_photo ? `http://localhost:5000${userProfile.profile_photo}` : null)} 
+                        alt="Profile"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    ) : (
+                      <div className={`w-20 h-20 ${profilePic.bgColor} rounded-full flex items-center justify-center text-xl font-bold text-white border-2 border-gray-200`}>
+                        {initials}
+                      </div>
+                    )}
+                    
+                    {/* Photo Upload Controls */}
+                    <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <label className="cursor-pointer text-white text-xs font-medium hover:text-blue-200">
+                        📷 Change
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handlePhotoSelect}
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="text-blue-500 hover:underline text-sm flex items-center gap-1"
-                  >
-                    ✏️ {isEditing ? 'Cancel' : 'Edit'}
-                  </button>
+
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setIsEditing(!isEditing)}
+                        className="text-blue-500 hover:underline text-sm flex items-center gap-1"
+                      >
+                        ✏️ {isEditing ? 'Cancel' : 'Edit Profile'}
+                      </button>
+                    </div>
+
+                    {/* Photo Upload/Remove Buttons */}
+                    {photoFile && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handlePhotoUpload}
+                          disabled={uploadingPhoto}
+                          className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1 rounded disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {uploadingPhoto && <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />}
+                          {uploadingPhoto ? 'Uploading...' : 'Save Photo'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPhotoFile(null);
+                            setPhotoPreview(null);
+                          }}
+                          className="bg-gray-500 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    {userProfile.profile_photo && !photoFile && (
+                      <button
+                        onClick={handlePhotoRemove}
+                        disabled={uploadingPhoto}
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded disabled:opacity-50 flex items-center gap-1 w-fit"
+                      >
+                        {uploadingPhoto && <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />}
+                        {uploadingPhoto ? 'Removing...' : 'Remove Photo'}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-4">

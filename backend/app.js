@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +19,43 @@ app.use(cors({
 
 // Body parser middleware
 app.use(express.json());
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Configure multer for profile photo uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'uploads/profile-photos');
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename: userid_timestamp.extension
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `user_${req.user.userId}_${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Check if file is an image
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'), false);
+  }
+};
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: fileFilter
+});
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -384,7 +424,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, username, email, role, phone, full_name, dob, is_banned FROM users WHERE id = $1',
+      'SELECT id, username, email, role, phone, full_name, dob, is_banned, profile_photo FROM users WHERE id = $1',
       [req.user.userId]
     );
 
@@ -404,7 +444,8 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
         phone: user.phone,
         full_name: user.full_name,
         dob: user.dob,
-        is_banned: user.is_banned
+        is_banned: user.is_banned,
+        profile_photo: user.profile_photo
       }
     });
   } catch (err) {
@@ -575,6 +616,134 @@ app.post('/api/user/change-password', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('❌ Password change error:', err);
     res.status(500).json({ message: 'Error changing password' });
+  }
+});
+
+// Upload profile photo - POST
+app.post('/api/user/upload-photo', authenticateToken, upload.single('profile_photo'), async (req, res) => {
+  console.log('📸 Profile photo upload request for user:', req.user.userId);
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image file provided' });
+  }
+
+  const userId = req.user.userId;
+  const filename = req.file.filename;
+  const filePath = `/uploads/profile-photos/${filename}`;
+
+  try {
+    // Get user info for logging
+    const userResult = await db.query('SELECT username, profile_photo FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+    const oldPhoto = user.profile_photo;
+
+    // Update user's profile photo path in database
+    await db.query(
+      'UPDATE users SET profile_photo = $1 WHERE id = $2',
+      [filePath, userId]
+    );
+
+    // Delete old profile photo if it exists
+    if (oldPhoto) {
+      const oldPhotoPath = path.join(__dirname, oldPhoto);
+      if (fs.existsSync(oldPhotoPath)) {
+        fs.unlinkSync(oldPhotoPath);
+        console.log('🗑️ Deleted old profile photo:', oldPhoto);
+      }
+    }
+
+    // Log the photo upload
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Profile photo uploaded', JSON.stringify({
+          username: user.username,
+          filename: filename,
+          old_photo: oldPhoto,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+    } catch (logErr) {
+      console.error('❌ Failed to log photo upload:', logErr);
+    }
+
+    console.log('✅ Profile photo uploaded successfully for user:', user.username);
+    res.json({ 
+      message: 'Profile photo uploaded successfully',
+      profile_photo_url: `http://localhost:5000${filePath}`
+    });
+
+  } catch (err) {
+    console.error('❌ Photo upload error:', err);
+    
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    res.status(500).json({ error: 'Failed to upload profile photo' });
+  }
+});
+
+// Remove profile photo - DELETE
+app.delete('/api/user/remove-photo', authenticateToken, async (req, res) => {
+  console.log('🗑️ Profile photo removal request for user:', req.user.userId);
+  
+  const userId = req.user.userId;
+
+  try {
+    // Get current photo path
+    const userResult = await db.query('SELECT username, profile_photo FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+    const currentPhoto = user.profile_photo;
+
+    if (!currentPhoto) {
+      return res.status(400).json({ error: 'No profile photo to remove' });
+    }
+
+    // Update database to remove photo reference
+    await db.query(
+      'UPDATE users SET profile_photo = NULL WHERE id = $1',
+      [userId]
+    );
+
+    // Delete physical file
+    const photoPath = path.join(__dirname, currentPhoto);
+    if (fs.existsSync(photoPath)) {
+      fs.unlinkSync(photoPath);
+      console.log('🗑️ Deleted profile photo file:', photoPath);
+    }
+
+    // Log the photo removal
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'Profile photo removed', JSON.stringify({
+          username: user.username,
+          removed_photo: currentPhoto,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+    } catch (logErr) {
+      console.error('❌ Failed to log photo removal:', logErr);
+    }
+
+    console.log('✅ Profile photo removed successfully for user:', user.username);
+    res.json({ message: 'Profile photo removed successfully' });
+
+  } catch (err) {
+    console.error('❌ Photo removal error:', err);
+    res.status(500).json({ error: 'Failed to remove profile photo' });
   }
 });
 

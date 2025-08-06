@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logo from '../assets/finguard.jpg';
 import { jwtDecode } from 'jwt-decode';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const toggleMenu = () => setIsOpen(!isOpen);
 
   const navigate = useNavigate();
@@ -23,6 +24,32 @@ const Navbar = () => {
     localStorage.removeItem('finguard-token');
     navigate('/');
   };
+
+  // Fetch user profile data
+  const fetchUserProfile = async () => {
+    const token = localStorage.getItem('finguard-token');
+    if (!token) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserProfile(data.profile);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
+
+  // Fetch profile data on component mount and when location changes
+  useEffect(() => {
+    fetchUserProfile();
+  }, [location.pathname]);
 
   // Generate dynamic profile picture
   const generateProfilePicture = (username) => {
@@ -52,7 +79,7 @@ const Navbar = () => {
     return 'US';
   };
 
-  // Get user data from token
+  // Get user data from token (fallback) and profile API
   const token = localStorage.getItem('finguard-token');
   let username = 'User';
   let email = '';
@@ -69,8 +96,14 @@ const Navbar = () => {
     }
   }
 
-  const profilePic = generateProfilePicture(username);
-  const initials = getUserInitials(username, email);
+  // Use profile data if available, otherwise fall back to token data
+  const displayUsername = userProfile?.username || username;
+  const displayEmail = userProfile?.email || email;
+  const displayRole = userProfile?.role || role;
+  const profilePhoto = userProfile?.profile_photo;
+
+  const profilePic = generateProfilePicture(displayUsername);
+  const initials = getUserInitials(displayUsername, displayEmail);
 
   // Get role indicator
   const getRoleIndicator = (userRole) => {
@@ -160,21 +193,37 @@ const Navbar = () => {
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               {/* Dynamic Profile Picture */}
-              <div className={`h-10 w-10 ${profilePic.bgColor} rounded-full flex items-center justify-center text-white font-bold text-sm relative`}>
-                {initials}
-                {/* Role indicator */}
-                {getRoleIndicator(role) && (
-                  <span className="absolute -top-1 -right-1 text-xs">
-                    {getRoleIndicator(role)}
-                  </span>
-                )}
-              </div>
+              {profilePhoto ? (
+                <div className="h-10 w-10 rounded-full relative">
+                  <img 
+                    src={`http://localhost:5000${profilePhoto}`} 
+                    alt="Profile"
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  {/* Role indicator */}
+                  {getRoleIndicator(displayRole) && (
+                    <span className="absolute -top-1 -right-1 text-xs">
+                      {getRoleIndicator(displayRole)}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className={`h-10 w-10 ${profilePic.bgColor} rounded-full flex items-center justify-center text-white font-bold text-sm relative`}>
+                  {initials}
+                  {/* Role indicator */}
+                  {getRoleIndicator(displayRole) && (
+                    <span className="absolute -top-1 -right-1 text-xs">
+                      {getRoleIndicator(displayRole)}
+                    </span>
+                  )}
+                </div>
+              )}
               
               {/* Username and Role */}
               <div className="flex flex-col">
-                <span className="text-black text-sm font-medium">{username}</span>
-                {role !== 'User' && (
-                  <span className="text-xs text-gray-500">{role}</span>
+                <span className="text-black text-sm font-medium">{displayUsername}</span>
+                {displayRole !== 'User' && (
+                  <span className="text-xs text-gray-500">{displayRole}</span>
                 )}
               </div>
             </div>

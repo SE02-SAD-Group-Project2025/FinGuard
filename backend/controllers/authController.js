@@ -171,7 +171,12 @@ const complete2FALogin = async (req, res) => {
     
     const mockRes = {
       json: (data) => { verificationResult = data; },
-      status: (code) => ({ json: (data) => { verificationResult = { error: data.error, status: code }; } })
+      status: (code) => ({
+        json: (data) => { 
+          verificationResult = { ...data, status: code }; 
+          return mockRes;
+        }
+      })
     };
     
     await twoFactorController.verify2FALogin(mockReq, mockRes);

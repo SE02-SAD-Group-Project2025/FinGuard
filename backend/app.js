@@ -86,8 +86,18 @@ const adminRoutes = require('./routes/adminRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
 const liabilitiesRoutes = require('./routes/liabilitiesRoutes');
 const twoFactorRoutes = require('./routes/twoFactorRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const familyRoutes = require('./routes/familyRoutes');
+const billsRoutes = require('./routes/billsRoutes');
+const goalsRoutes = require('./routes/goalsRoutes');
+const challengesRoutes = require('./routes/challengesRoutes');
+const anomalyRoutes = require('./routes/anomalyRoutes');
+const aiRoutes = require('./routes/aiRoutes');
+const adminPremiumRoutes = require('./routes/adminPremiumRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/summary', summaryRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/transactions', transactionRoutes);
@@ -95,6 +105,14 @@ app.use('/admin', adminRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/liabilities', liabilitiesRoutes);
 app.use('/api/2fa', twoFactorRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/family', familyRoutes);
+app.use('/api/bills', billsRoutes);
+app.use('/api/goals', goalsRoutes);
+app.use('/api/challenges', challengesRoutes);
+app.use('/api/anomalies', anomalyRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/admin/premium', adminPremiumRoutes);
 // ================== ENHANCED AUTHENTICATION ENDPOINTS ==================
 
 // Check username availability
@@ -747,10 +765,65 @@ app.delete('/api/user/remove-photo', authenticateToken, async (req, res) => {
   }
 });
 
+// ================== TEMPORARY ADMIN SETUP ENDPOINT ==================
+app.post('/api/admin/make-admin', async (req, res) => {
+  const { email, secret } = req.body;
+  
+  // Simple secret check for security
+  if (secret !== 'admin-setup-2024') {
+    return res.status(403).json({ error: 'Invalid secret' });
+  }
+  
+  try {
+    const result = await db.query(
+      'UPDATE users SET role = $1 WHERE email = $2 RETURNING id, username, email, role',
+      ['Admin', email]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ 
+      message: 'User updated to admin successfully',
+      user: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Admin setup error:', err);
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
 // ================== SERVER STARTUP ==================
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+app.listen(PORT, async () => {
+  // Initialize user configurations table
+  try {
+    const db = require('./db');
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS user_configurations (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        config_type VARCHAR(50) NOT NULL,
+        config_data JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, config_type)
+      );
+    `);
+
+    await db.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_configurations_user_id_type 
+      ON user_configurations(user_id, config_type);
+    `);
+
+    console.log('✅ User configurations table initialized');
+  } catch (error) {
+    console.error('❌ Error initializing user configurations table:', error);
+  }
+  
   console.log('🚀 FinGuard Server Status:');
   console.log('=====================================');
   console.log(`✅ Server running on port ${PORT}`);
@@ -761,6 +834,7 @@ app.listen(PORT, () => {
   console.log('✅ Password reset emails with beautiful HTML templates');
   console.log('🎉 Welcome emails for new registrations');
   console.log('✅ Profile management endpoints loaded');
+  console.log('⚙️ User configuration & dashboard customization endpoints loaded');
   console.log('📝 Enhanced logging system enabled');
   console.log('✅ All routes loaded successfully');
   console.log('=====================================');
@@ -770,3 +844,5 @@ app.listen(PORT, () => {
   console.log('📧 Email Service: Gmail (' + process.env.EMAIL_USER + ')');
   console.log('=====================================');
 });
+
+module.exports = app;

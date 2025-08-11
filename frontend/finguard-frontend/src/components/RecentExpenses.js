@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Edit2, Save, X, Trash2 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDelete }) => {
+  const { isDarkMode } = useTheme();
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
 
@@ -75,20 +77,32 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
 
   if (!expenses?.length) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Expenses</h2>
-        <p className="text-gray-600">No expenses recorded yet. Add your first expense to get started!</p>
+      <div className={`p-4 rounded-lg shadow-lg transition-colors duration-300 ${
+        isDarkMode ? 'bg-gray-800' : 'bg-white'
+      }`}>
+        <h2 className={`text-xl font-bold mb-4 ${
+          isDarkMode ? 'text-white' : 'text-gray-800'
+        }`}>Recent Expenses</h2>
+        <p className={`${
+          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+        }`}>No expenses recorded yet. Add your first expense to get started!</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-lg">
-      <h2 className="text-xl font-bold text-gray-800 mb-6">Recent Expenses</h2>
+    <div className={`p-4 rounded-lg shadow-lg transition-colors duration-300 ${
+      isDarkMode ? 'bg-gray-800' : 'bg-white'
+    }`}>
+      <h2 className={`text-xl font-bold mb-6 ${
+        isDarkMode ? 'text-white' : 'text-gray-800'
+      }`}>Recent Expenses</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-6xl">
         {expenses.map((expense) => (
-          <div key={expense.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+          <div key={expense.id} className={`rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow ${
+            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3 flex-1">
                 <div className={`w-12 h-12 ${expense.color || 'bg-gray-100'} rounded-lg flex items-center justify-center text-xl`}>
@@ -102,14 +116,18 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
                         type="text"
                         value={editForm.title || ''}
                         onChange={(e) => handleInputChange('title', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm font-medium focus:ring-red-500 focus:border-red-500"
+                        className={`w-full px-2 py-1 border rounded text-sm font-medium focus:ring-red-500 focus:border-red-500 ${
+                          isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'
+                        }`}
                         placeholder="Expense title"
                       />
                       <input
                         type="number"
                         value={editForm.amount || ''}
                         onChange={(e) => handleInputChange('amount', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-red-500 focus:border-red-500"
+                        className={`w-full px-2 py-1 border rounded text-sm focus:ring-red-500 focus:border-red-500 ${
+                          isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'
+                        }`}
                         placeholder="Amount"
                         min="0"
                         step="0.01"
@@ -118,25 +136,37 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
                         type="date"
                         value={formatDateForInput(editForm.date) || ''}
                         onChange={(e) => handleInputChange('date', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-600 focus:ring-red-500 focus:border-red-500"
+                        className={`w-full px-2 py-1 border rounded text-sm focus:ring-red-500 focus:border-red-500 ${
+                          isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-600'
+                        }`}
                       />
                       <textarea
                         value={editForm.description || ''}
                         onChange={(e) => handleInputChange('description', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-600 focus:ring-red-500 focus:border-red-500"
+                        className={`w-full px-2 py-1 border rounded text-sm focus:ring-red-500 focus:border-red-500 ${
+                          isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-600'
+                        }`}
                         placeholder="Description (optional)"
                         rows="2"
                       />
                     </div>
                   ) : (
                     <div>
-                      <h3 className="font-medium text-gray-800">{expense.title}</h3>
-                      <p className="text-sm text-gray-600">{formatDateForDisplay(expense.date)}</p>
+                      <h3 className={`font-medium ${
+                        isDarkMode ? 'text-white' : 'text-gray-800'
+                      }`}>{expense.title}</h3>
+                      <p className={`text-sm ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>{formatDateForDisplay(expense.date)}</p>
                       {expense.description && (
-                        <p className="text-xs text-gray-500 mt-1">{expense.description}</p>
+                        <p className={`text-xs mt-1 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                        }`}>{expense.description}</p>
                       )}
                       {expense.category && (
-                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full mt-1">
+                        <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${
+                          isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                        }`}>
                           {expense.category}
                         </span>
                       )}
@@ -193,14 +223,20 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
       </div>
 
       {/* Total Summary */}
-      <div className="mt-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className={`mt-6 p-4 rounded-lg shadow-sm border transition-colors duration-300 ${
+        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+      }`}>
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-800">Total Expenses</h3>
+          <h3 className={`text-lg font-semibold ${
+            isDarkMode ? 'text-white' : 'text-gray-800'
+          }`}>Total Expenses</h3>
           <span className="text-xl font-bold text-red-600">
             - {formatAmount(totalExpense)}
           </span>
         </div>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className={`text-sm mt-1 ${
+          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+        }`}>
           {expenses.length} expense{expenses.length !== 1 ? 's' : ''} recorded
         </p>
       </div>

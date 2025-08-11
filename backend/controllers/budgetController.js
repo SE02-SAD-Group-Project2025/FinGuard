@@ -233,11 +233,83 @@ const deleteBudget = async (req, res) => {
   }
 };
 
+// Apply AI budget recommendations
+const applyAIRecommendations = async (req, res) => {
+  const userId = req.user.userId;
+  const { recommendations, totalSavings } = req.body;
+
+  try {
+    if (!recommendations || !Array.isArray(recommendations)) {
+      return res.status(400).json({ error: 'Invalid recommendations data' });
+    }
+
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+
+    // Update budgets based on AI recommendations
+    for (const rec of recommendations) {
+      try {
+        // Check if budget exists for this category
+        const existingBudget = await db.query(
+          'SELECT * FROM budgets WHERE user_id = $1 AND category = $2 AND month = $3 AND year = $4',
+          [userId, rec.category, month, year]
+        );
+
+        if (existingBudget.rows.length > 0) {
+          // Update existing budget
+          await db.query(
+            'UPDATE budgets SET limit_amount = $1 WHERE user_id = $2 AND category = $3 AND month = $4 AND year = $5',
+            [rec.new, userId, rec.category, month, year]
+          );
+        } else {
+          // Create new budget
+          await db.query(
+            'INSERT INTO budgets (user_id, category, limit_amount, month, year) VALUES ($1, $2, $3, $4, $5)',
+            [userId, rec.category, rec.new, month, year]
+          );
+        }
+      } catch (budgetError) {
+        console.error(`Error updating budget for ${rec.category}:`, budgetError);
+      }
+    }
+
+    // Log AI recommendations application
+    try {
+      await db.query(
+        'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
+        [userId, 'AI recommendations applied', JSON.stringify({
+          recommendations_count: recommendations.length,
+          total_savings: totalSavings,
+          categories_affected: recommendations.map(r => r.category),
+          period: `${month}/${year}`,
+          ip_address: req.ip || req.connection?.remoteAddress,
+          user_agent: req.get('User-Agent')
+        })]
+      );
+      console.log('✅ AI recommendations application log created');
+    } catch (logErr) {
+      console.error('❌ Failed to log AI recommendations application:', logErr);
+    }
+
+    res.json({ 
+      message: 'AI recommendations applied successfully',
+      applied_count: recommendations.length,
+      total_savings: totalSavings,
+      period: `${month}/${year}`
+    });
+  } catch (err) {
+    console.error('🔴 APPLY AI RECOMMENDATIONS ERROR:', err.message);
+    res.status(500).json({ error: 'Failed to apply AI recommendations' });
+  }
+};
+
 module.exports = {
   addBudget,
   getBudgets,
   getBudgetSummary,
   getBudgetAlerts,
   updateBudget,
-  deleteBudget
+  deleteBudget,
+  applyAIRecommendations
 };

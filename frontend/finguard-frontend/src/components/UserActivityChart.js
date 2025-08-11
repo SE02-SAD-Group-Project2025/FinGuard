@@ -10,6 +10,7 @@ import {
   Title,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { useTheme } from '../contexts/ThemeContext';
 
 ChartJS.register(
   LineElement,
@@ -22,6 +23,7 @@ ChartJS.register(
 );
 
 const UserActivityChart = () => {
+  const { isDarkMode } = useTheme();
   const [chartData, setChartData] = useState(null);
   const [timeframe, setTimeframe] = useState('7d');
   const [loading, setLoading] = useState(true);
@@ -221,26 +223,33 @@ const UserActivityChart = () => {
       legend: {
         position: 'top',
         labels: {
-          color: '#374151',
+          color: isDarkMode ? '#d1d5db' : '#374151',
           font: { size: 14 },
         },
       },
       title: {
         display: true,
         text: `User Engagement Over Time (${timeframe.toUpperCase()})`,
-        color: '#111827',
+        color: isDarkMode ? '#ffffff' : '#111827',
         font: { size: 18 },
         padding: { top: 10, bottom: 30 },
+      },
+      tooltip: {
+        backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: isDarkMode ? '#fff' : '#000',
+        bodyColor: isDarkMode ? '#fff' : '#000',
+        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        borderWidth: 1,
       },
     },
     scales: {
       x: {
-        ticks: { color: '#6b7280' },
-        grid: { color: '#e5e7eb' },
+        ticks: { color: isDarkMode ? '#9ca3af' : '#6b7280' },
+        grid: { color: isDarkMode ? 'rgba(156, 163, 175, 0.2)' : '#e5e7eb' },
       },
       y: {
-        ticks: { color: '#6b7280' },
-        grid: { color: '#e5e7eb' },
+        ticks: { color: isDarkMode ? '#9ca3af' : '#6b7280' },
+        grid: { color: isDarkMode ? 'rgba(156, 163, 175, 0.2)' : '#e5e7eb' },
       },
     },
     interaction: {
@@ -250,10 +259,14 @@ const UserActivityChart = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+    <div className={`p-6 rounded-lg shadow-md mb-8 transition-colors duration-300 ${
+      isDarkMode ? 'bg-gray-800' : 'bg-white'
+    }`}>
       {/* Header with Timeframe Selector */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">User Activity Analytics</h3>
+        <h3 className={`text-lg font-semibold ${
+          isDarkMode ? 'text-white' : 'text-gray-900'
+        }`}>User Activity Analytics</h3>
         <div className="flex gap-2">
           {[
             { value: '24h', label: '24 Hours' },
@@ -266,7 +279,7 @@ const UserActivityChart = () => {
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 timeframe === option.value
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : (isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')
               }`}
             >
               {option.label}
@@ -280,14 +293,20 @@ const UserActivityChart = () => {
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Loading chart data...</span>
+            <span className={`ml-2 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-600'
+            }`}>Loading chart data...</span>
           </div>
         ) : error ? (
-          <div className="h-full flex items-center justify-center text-red-600">
+          <div className={`h-full flex items-center justify-center ${
+            isDarkMode ? 'text-red-400' : 'text-red-600'
+          }`}>
             <span>{error}</span>
             <button 
               onClick={() => fetchActivityData()}
-              className="ml-2 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+              className={`ml-2 px-3 py-1 rounded transition-colors ${
+                isDarkMode ? 'bg-red-900 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700 hover:bg-red-200'
+              }`}
             >
               Retry
             </button>
@@ -295,7 +314,9 @@ const UserActivityChart = () => {
         ) : chartData ? (
           <Line data={chartData} options={options} />
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-500">
+          <div className={`h-full flex items-center justify-center ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}>
             No chart data available
           </div>
         )}

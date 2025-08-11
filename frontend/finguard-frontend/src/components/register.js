@@ -288,6 +288,9 @@ const Register = () => {
       // Store token for immediate login
       localStorage.setItem('finguard-token', data.token);
       
+      // Trigger subscription refresh
+      window.dispatchEvent(new Event('finguard-refresh-subscription'));
+      
       // Navigate to dashboard
       navigate('/dashboard');
     } catch (err) {

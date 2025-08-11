@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { buildApiUrl, getApiConfig } from '../config/api';
 import AdminNavbar from './AdminNavbar';
 import { 
   Users, 
@@ -31,8 +32,11 @@ import {
 } from 'lucide-react';
 import AdminSummaryCards from './AdminSummaryCards';
 import UserActivityChart from './UserActivityChart';
+import AdminPremiumOversight from './AdminPremiumOversight';
+import { useTheme } from '../contexts/ThemeContext';
 
 const AdminDashboard = () => {
+  const { isDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState('users');
   const [newCategory, setNewCategory] = useState('');
   const [categories, setCategories] = useState([]);
@@ -74,7 +78,7 @@ const AdminDashboard = () => {
   const [reportPagination, setReportPagination] = useState({});
 
   // API base URL
-  const API_BASE = 'http://localhost:5000';
+  const API_BASE = getApiConfig().BASE_URL;
 
   // Get token from localStorage
   const getToken = () => {
@@ -244,7 +248,7 @@ const AdminDashboard = () => {
   // ✅ Added get priority color for reports
   const getPriorityColor = (priority) => {
     const colors = {
-      'low': 'text-gray-600 bg-gray-100',
+      'low': isDarkMode ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-100',
       'medium': 'text-blue-600 bg-blue-100',
       'high': 'text-orange-600 bg-orange-100',
       'urgent': 'text-red-600 bg-red-100'
@@ -258,7 +262,7 @@ const AdminDashboard = () => {
       'pending': 'text-yellow-600 bg-yellow-100',
       'in_progress': 'text-blue-600 bg-blue-100',
       'resolved': 'text-green-600 bg-green-100',
-      'closed': 'text-gray-600 bg-gray-100'
+      'closed': isDarkMode ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-100'
     };
     return colors[status] || colors['pending'];
   };
@@ -316,9 +320,9 @@ const AdminDashboard = () => {
     } else if (activityLower.includes('updated') || activityLower.includes('changed')) {
       return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     } else if (activityLower.includes('deleted')) {
-      return 'text-gray-600 bg-gray-50 border-gray-200';
+      return isDarkMode ? 'text-gray-300 bg-gray-800 border-gray-600' : 'text-gray-600 bg-gray-50 border-gray-200';
     }
-    return 'text-gray-600 bg-gray-50 border-gray-200';
+    return isDarkMode ? 'text-gray-300 bg-gray-800 border-gray-600' : 'text-gray-600 bg-gray-50 border-gray-200';
   };
 
   // Fetch users from backend
@@ -609,8 +613,12 @@ const AdminDashboard = () => {
     return (
       <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
         type === 'error' 
-          ? 'bg-red-100 text-red-800 border border-red-200' 
-          : 'bg-green-100 text-green-800 border border-green-200'
+          ? isDarkMode 
+            ? 'bg-red-900/20 text-red-400 border border-red-800' 
+            : 'bg-red-100 text-red-800 border border-red-200'
+          : isDarkMode 
+            ? 'bg-green-900/20 text-green-400 border border-green-800'
+            : 'bg-green-100 text-green-800 border border-green-200'
       }`}>
         <AlertCircle className="w-4 h-4 flex-shrink-0" />
         <span className="flex-1">{message}</span>
@@ -619,7 +627,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Full-width Sticky Admin Navbar */}
       <AdminNavbar />
 
@@ -642,6 +650,7 @@ const AdminDashboard = () => {
             { id: 'users', label: 'Manage Users', icon: <Users className="w-4 h-4" /> },
             { id: 'logs', label: 'System Logs', icon: <ClipboardList className="w-4 h-4" /> },
             { id: 'reports', label: 'User Reports', icon: <MessageCircle className="w-4 h-4" /> }, // ✅ Added Reports tab
+            { id: 'premium', label: 'Premium Oversight', icon: <BarChart3 className="w-4 h-4" /> }, // ✅ Added Premium Oversight tab
           ].map((tab) => (
             <button
               key={tab.id}
@@ -649,7 +658,9 @@ const AdminDashboard = () => {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium border transition-colors ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border-gray-300'
+                  : isDarkMode 
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-600' 
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border-gray-300'
               }`}
             >
               {tab.icon}
@@ -661,7 +672,11 @@ const AdminDashboard = () => {
           <button
             onClick={refreshData}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium border bg-white text-gray-700 hover:bg-gray-100 border-gray-300 disabled:opacity-50"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium border disabled:opacity-50 ${
+              isDarkMode 
+                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-600' 
+                : 'bg-white text-gray-700 hover:bg-gray-100 border-gray-300'
+            }`}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -670,59 +685,87 @@ const AdminDashboard = () => {
         </div>
 
         {/* Main Tab Content */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className={`p-6 rounded-lg shadow-md transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        }`}>
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading {activeTab}...</p>
+              <p className={`mt-4 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}>Loading {activeTab}...</p>
             </div>
           )}
 
           {/* Manage Users */}
           {activeTab === 'users' && !loading && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">User Management ({users.length} users)</h2>
+              <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>User Management ({users.length} users)</h2>
               {users.length === 0 ? (
                 <div className="text-center py-8">
-                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No users found</p>
-                  <button onClick={fetchUsers} className="mt-2 text-blue-600 hover:text-blue-800">
+                  <Users className={`w-16 h-16 mx-auto mb-4 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-300'
+                  }`} />
+                  <p className={`${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>No users found</p>
+                  <button onClick={fetchUsers} className={`mt-2 ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}>
                     Try refreshing
                   </button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full table-auto text-left border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-50">
+                  <table className={`w-full table-auto text-left border rounded-lg ${
+                    isDarkMode ? 'border-gray-700' : 'border-gray-200'
+                  }`}>
+                    <thead className={`${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
                       <tr>
-                        <th className="p-3 font-medium text-gray-700">ID</th>
-                        <th className="p-3 font-medium text-gray-700">Username</th>
-                        <th className="p-3 font-medium text-gray-700">Email</th>
-                        <th className="p-3 font-medium text-gray-700">Role</th>
-                        <th className="p-3 font-medium text-gray-700">Status</th>
-                        <th className="p-3 font-medium text-gray-700">Actions</th>
+                        <th className={`p-3 font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>ID</th>
+                        <th className={`p-3 font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>Username</th>
+                        <th className={`p-3 font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>Email</th>
+                        <th className={`p-3 font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>Role</th>
+                        <th className={`p-3 font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>Status</th>
+                        <th className={`p-3 font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {users.map((user) => (
-                        <tr key={user.id} className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="p-3 text-sm">{user.id}</td>
-                          <td className="p-3">{user.username || 'N/A'}</td>
-                          <td className="p-3">{user.email}</td>
+                        <tr key={user.id} className={`border-t ${
+                          isDarkMode 
+                            ? 'border-gray-700 hover:bg-gray-700 bg-gray-800' 
+                            : 'border-gray-200 hover:bg-gray-50 bg-white'
+                        }`}>
+                          <td className={`p-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{user.id}</td>
+                          <td className={`p-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{user.username || 'N/A'}</td>
+                          <td className={`p-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{user.email}</td>
                           <td className="p-3">
                             <select 
                               value={user.role || 'User'} 
                               onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className={`border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-gray-200' : 'border-gray-300 bg-white text-gray-900'}`}
                             >
                               <option value="User">User</option>
                               <option value="Admin">Admin</option>
-                              <option value="Premium User">Premium User</option>
+                              <option value="Premium User">Premium User (Legacy)</option>
                             </select>
                           </td>
                           <td className="p-3">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              user.is_banned ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                              user.is_banned 
+                                ? isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-800'
+                                : isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'
                             }`}>
                               {user.is_banned ? 'Banned' : 'Active'}
                             </span>
@@ -753,8 +796,10 @@ const AdminDashboard = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold">User Reports Management</h2>
-                  <p className="text-sm text-gray-600">
+                  <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>User Reports Management</h2>
+                  <p className={`text-sm ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     Total: {reports.length} reports • 
                     Pending: {reports.filter(r => r.status === 'pending').length} • 
                     Resolved: {reports.filter(r => r.status === 'resolved').length}
@@ -765,39 +810,39 @@ const AdminDashboard = () => {
               {/* Reports Statistics */}
               {reportsStats.statusStats && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-yellow-50 p-4 rounded-lg">
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-yellow-900/20' : 'bg-yellow-50'}`}>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-yellow-600" />
-                      <span className="text-yellow-700 font-medium">Pending</span>
+                      <Clock className={`w-5 h-5 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                      <span className={`font-medium ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>Pending</span>
                     </div>
-                    <p className="text-2xl font-bold text-yellow-800">
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
                       {reportsStats.statusStats.find(s => s.status === 'pending')?.count || 0}
                     </p>
                   </div>
-                  <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
                     <div className="flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-blue-600" />
-                      <span className="text-blue-700 font-medium">In Progress</span>
+                      <Activity className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                      <span className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>In Progress</span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-800">
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-blue-200' : 'text-blue-800'}`}>
                       {reportsStats.statusStats.find(s => s.status === 'in_progress')?.count || 0}
                     </p>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-green-900/20' : 'bg-green-50'}`}>
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-green-700 font-medium">Resolved</span>
+                      <CheckCircle className={`w-5 h-5 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                      <span className={`font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>Resolved</span>
                     </div>
-                    <p className="text-2xl font-bold text-green-800">
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-200' : 'text-green-800'}`}>
                       {reportsStats.statusStats.find(s => s.status === 'resolved')?.count || 0}
                     </p>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-purple-900/20' : 'bg-purple-50'}`}>
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-purple-600" />
-                      <span className="text-purple-700 font-medium">This Month</span>
+                      <BarChart3 className={`w-5 h-5 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                      <span className={`font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>This Month</span>
                     </div>
-                    <p className="text-2xl font-bold text-purple-800">
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-purple-200' : 'text-purple-800'}`}>
                       {reportsStats.recentReports || 0}
                     </p>
                   </div>
@@ -805,14 +850,16 @@ const AdminDashboard = () => {
               )}
 
               {/* Reports Filters */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <label className={`block text-sm font-medium mb-1 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}>Status</label>
                     <select
                       value={reportFilters.status}
                       onChange={(e) => handleReportFilterChange('status', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">All Statuses</option>
                       <option value="pending">Pending</option>
@@ -822,11 +869,13 @@ const AdminDashboard = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <label className={`block text-sm font-medium mb-1 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}>Category</label>
                     <select
                       value={reportFilters.category}
                       onChange={(e) => handleReportFilterChange('category', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">All Categories</option>
                       <option value="bug">Bug Report</option>
@@ -837,11 +886,13 @@ const AdminDashboard = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <label className={`block text-sm font-medium mb-1 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}>Priority</label>
                     <select
                       value={reportFilters.priority}
                       onChange={(e) => handleReportFilterChange('priority', e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">All Priorities</option>
                       <option value="low">Low</option>
@@ -880,8 +931,12 @@ const AdminDashboard = () => {
               {/* Reports List */}
               {reports.length === 0 ? (
                 <div className="text-center py-8">
-                  <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No reports found</p>
+                  <MessageCircle className={`w-16 h-16 mx-auto mb-4 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-300'
+                  }`} />
+                  <p className={`${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>No reports found</p>
                   <button onClick={() => fetchReports()} className="mt-2 text-blue-600 hover:text-blue-800">
                     Try refreshing
                   </button>
@@ -889,7 +944,7 @@ const AdminDashboard = () => {
               ) : (
                 <div className="space-y-4">
                   {reports.map((report) => (
-                    <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div key={report.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3 flex-1">
                           <div className="mt-1">
@@ -897,7 +952,9 @@ const AdminDashboard = () => {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-gray-900">{report.title}</h4>
+                              <h4 className={`font-semibold ${
+                                isDarkMode ? 'text-white' : 'text-gray-900'
+                              }`}>{report.title}</h4>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(report.priority)}`}>
                                 {report.priority}
                               </span>
@@ -906,9 +963,13 @@ const AdminDashboard = () => {
                               </span>
                             </div>
                             
-                            <p className="text-gray-600 mb-3">{report.description}</p>
+                            <p className={`mb-3 ${
+                              isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                            }`}>{report.description}</p>
                             
-                            <div className="text-sm text-gray-500 mb-3">
+                            <div className={`text-sm mb-3 ${
+                              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                            }`}>
                               <div className="flex items-center gap-4">
                                 <span className="flex items-center gap-1">
                                   <User className="w-3 h-3" />
@@ -923,7 +984,7 @@ const AdminDashboard = () => {
 
                             {/* Admin Response Display */}
                             {report.admin_response && (
-                              <div className="p-3 bg-blue-50 rounded-lg mb-3">
+                              <div className="p-3 bg-blue-50 hover:bg-blue-50 dark:bg-blue-50 dark:hover:bg-blue-50 rounded-lg mb-3">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Shield className="w-4 h-4 text-blue-600" />
                                   <span className="text-sm font-medium text-blue-800">
@@ -944,7 +1005,7 @@ const AdminDashboard = () => {
                               setAdminResponse(report.admin_response || '');
                               setShowResponseModal(true);
                             }}
-                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-1"
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center gap-1"
                           >
                             <Send className="w-3 h-3" />
                             Respond
@@ -959,7 +1020,9 @@ const AdminDashboard = () => {
               {/* Reports Pagination */}
               {reportPagination.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <div className="text-sm text-gray-600">
+                  <div className={`text-sm ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     Showing {((reportPagination.page - 1) * reportFilters.limit) + 1} to{' '}
                     {Math.min(reportPagination.page * reportFilters.limit, reportPagination.total)} of{' '}
                     {reportPagination.total} reports
@@ -968,20 +1031,30 @@ const AdminDashboard = () => {
                     <button
                       onClick={() => handleReportPageChange(reportPagination.page - 1)}
                       disabled={!reportPagination.hasPrev}
-                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className={`px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' 
+                          : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                      }`}
                     >
                       <ChevronLeft className="w-4 h-4" />
                       Previous
                     </button>
                     
-                    <span className="text-sm text-gray-600">
+                    <span className={`text-sm ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                       Page {reportPagination.page} of {reportPagination.totalPages}
                     </span>
 
                     <button
                       onClick={() => handleReportPageChange(reportPagination.page + 1)}
                       disabled={!reportPagination.hasNext}
-                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className={`px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' 
+                          : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                      }`}
                     >
                       Next
                       <ChevronRight className="w-4 h-4" />
@@ -998,7 +1071,9 @@ const AdminDashboard = () => {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-xl font-semibold">System Activity Logs</h2>
-                  <p className="text-sm text-gray-600">
+                  <p className={`text-sm ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     Total: {logPagination.total || 0} entries • 
                     Page {logPagination.page || 1} of {logPagination.totalPages || 1}
                   </p>
@@ -1013,7 +1088,7 @@ const AdminDashboard = () => {
                   </button>
                   <button
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
                   >
                     <Filter className="w-4 h-4" />
                     {showAdvancedFilters ? 'Hide' : 'Show'} Filters
@@ -1024,7 +1099,7 @@ const AdminDashboard = () => {
               {/* Log Statistics */}
               {logStats.overview && (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-                  <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="bg-blue-50 hover:bg-blue-50 dark:bg-blue-50 dark:hover:bg-blue-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Activity className="w-5 h-5 text-blue-600" />
                       <span className="text-blue-700 font-medium">Total Logs</span>
@@ -1064,47 +1139,57 @@ const AdminDashboard = () => {
 
               {/* Advanced Filters */}
               {showAdvancedFilters && (
-                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                      <label className={`block text-sm font-medium mb-1 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Username</label>
                       <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                        <Search className={`w-4 h-4 absolute left-3 top-3 ${
+                          isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                        }`} />
                         <input
                           type="text"
                           placeholder="Search username..."
                           value={logFilters.username}
                           onChange={(e) => handleFilterChange('username', e.target.value)}
-                          className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Activity</label>
+                      <label className={`block text-sm font-medium mb-1 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Activity</label>
                       <input
                         type="text"
                         placeholder="Search activity..."
                         value={logFilters.activity}
                         onChange={(e) => handleFilterChange('activity', e.target.value)}
-                        className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="px-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                      <label className={`block text-sm font-medium mb-1 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Start Date</label>
                       <input
                         type="datetime-local"
                         value={logFilters.startDate}
                         onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                        className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="px-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                      <label className={`block text-sm font-medium mb-1 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>End Date</label>
                       <input
                         type="datetime-local"
                         value={logFilters.endDate}
                         onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                        className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="px-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -1144,8 +1229,12 @@ const AdminDashboard = () => {
               {/* Logs List */}
               {logs.length === 0 ? (
                 <div className="text-center py-8">
-                  <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No logs found</p>
+                  <ClipboardList className={`w-16 h-16 mx-auto mb-4 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-300'
+                  }`} />
+                  <p className={`${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>No logs found</p>
                   <button onClick={() => fetchLogs()} className="mt-2 text-blue-600 hover:text-blue-800">
                     Try refreshing
                   </button>
@@ -1165,33 +1254,51 @@ const AdminDashboard = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold text-gray-900">
+                                <span className={`font-semibold ${
+                                  isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>
                                   {log.activity}
                                 </span>
                                 {log.details?.admin_action && (
-                                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    isDarkMode 
+                                      ? 'bg-purple-900/30 text-purple-300' 
+                                      : 'bg-purple-100 text-purple-800'
+                                  }`}>
                                     Admin Action
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-600 mb-2">
+                              <div className={`text-sm mb-2 ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
                                 <span className="font-medium">User:</span> {log.username || 'System'} 
                                 {log.role && (
-                                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                  <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                  isDarkMode 
+                                    ? 'bg-blue-900/30 text-blue-300' 
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
                                     {log.role}
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className={`text-xs ${
+                                isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                              }`}>
                                 {new Date(log.timestamp).toLocaleString()}
                               </div>
                             </div>
                           </div>
                           <div className="ml-4 flex items-center gap-2">
                             {expandedLogs.has(log.id) ? (
-                              <ChevronUp className="w-5 h-5 text-gray-400" />
+                              <ChevronUp className={`w-5 h-5 ${
+                                isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                              }`} />
                             ) : (
-                              <ChevronDown className="w-5 h-5 text-gray-400" />
+                              <ChevronDown className={`w-5 h-5 ${
+                                isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                              }`} />
                             )}
                           </div>
                         </div>
@@ -1199,28 +1306,44 @@ const AdminDashboard = () => {
 
                       {/* Expanded Details */}
                       {expandedLogs.has(log.id) && log.details && (
-                        <div className="border-t bg-gray-50 p-4">
-                          <h4 className="font-medium text-gray-900 mb-3">Activity Details</h4>
+                        <div className={`border-t p-4 ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <h4 className={`font-medium mb-3 ${
+                            isDarkMode ? 'text-white' : 'text-gray-900'
+                          }`}>Activity Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             {Object.entries(log.details).map(([key, value]) => {
                               if (typeof value === 'object' && value !== null) {
                                 return (
-                                  <div key={key} className="bg-white p-3 rounded border">
-                                    <span className="font-medium text-gray-700 capitalize">
+                                  <div key={key} className={`p-3 rounded border transition-colors duration-300 ${
+                                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                                  }`}>
+                                    <span className={`font-medium capitalize ${
+                                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
                                       {key.replace(/_/g, ' ')}:
                                     </span>
-                                    <pre className="mt-1 text-gray-600 text-xs overflow-x-auto">
+                                    <pre className={`mt-1 text-xs overflow-x-auto ${
+                                      isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                       {JSON.stringify(value, null, 2)}
                                     </pre>
                                   </div>
                                 );
                               }
                               return (
-                                <div key={key} className="bg-white p-3 rounded border">
-                                  <span className="font-medium text-gray-700 capitalize">
+                                <div key={key} className={`p-3 rounded border transition-colors duration-300 ${
+                                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                                  }`}>
+                                  <span className={`font-medium capitalize ${
+                                      isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
                                     {key.replace(/_/g, ' ')}:
                                   </span>
-                                  <p className="mt-1 text-gray-600">{String(value)}</p>
+                                  <p className={`mt-1 ${
+                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                  }`}>{String(value)}</p>
                                 </div>
                               );
                             })}
@@ -1235,7 +1358,9 @@ const AdminDashboard = () => {
               {/* Pagination */}
               {logPagination.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <div className="text-sm text-gray-600">
+                  <div className={`text-sm ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     Showing {((logPagination.page - 1) * logFilters.limit) + 1} to{' '}
                     {Math.min(logPagination.page * logFilters.limit, logPagination.total)} of{' '}
                     {logPagination.total} entries
@@ -1244,7 +1369,11 @@ const AdminDashboard = () => {
                     <button
                       onClick={() => handlePageChange(logPagination.page - 1)}
                       disabled={!logPagination.hasPrev}
-                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className={`px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' 
+                          : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                      }`}
                     >
                       <ChevronLeft className="w-4 h-4" />
                       Previous
@@ -1259,10 +1388,12 @@ const AdminDashboard = () => {
                           <button
                             key={pageNum}
                             onClick={() => handlePageChange(pageNum)}
-                            className={`px-3 py-2 rounded-lg ${
+                            className={`px-3 py-2 rounded-lg transition-colors duration-200 ${
                               pageNum === logPagination.page
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-gray-300 hover:bg-gray-50'
+                                : isDarkMode 
+                                  ? 'bg-gray-800 border border-gray-600 hover:bg-gray-700 text-gray-300'
+                                  : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
                             }`}
                           >
                             {pageNum}
@@ -1274,7 +1405,11 @@ const AdminDashboard = () => {
                     <button
                       onClick={() => handlePageChange(logPagination.page + 1)}
                       disabled={!logPagination.hasNext}
-                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className={`px-3 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 text-gray-300' 
+                          : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+                      }`}
                     >
                       Next
                       <ChevronRight className="w-4 h-4" />
@@ -1287,9 +1422,11 @@ const AdminDashboard = () => {
               {logStats.topActivities && logStats.topUsers && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                   {/* Top Activities */}
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-blue-600" />
+                  <div className={`p-6 rounded-lg ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <BarChart3 className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                       Top Activities
                     </h3>
                     <div className="space-y-3">
@@ -1297,20 +1434,24 @@ const AdminDashboard = () => {
                         <div key={idx} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">{getActivityIcon(activity.activity)}</span>
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className={`text-sm font-medium ${
+                              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
                               {activity.activity}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div className={`w-16 rounded-full h-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                               <div 
-                                className="bg-blue-600 h-2 rounded-full"
+                                className="bg-blue-600 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-600 h-2 rounded-full"
                                 style={{ 
                                   width: `${(activity.count / logStats.topActivities[0].count) * 100}%` 
                                 }}
                               ></div>
                             </div>
-                            <span className="text-sm font-semibold text-gray-900 w-8 text-right">
+                            <span className={`text-sm font-semibold w-8 text-right ${
+                              isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
                               {activity.count}
                             </span>
                           </div>
@@ -1320,9 +1461,11 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Top Users */}
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Users className="w-5 h-5 text-green-600" />
+                  <div className={`p-6 rounded-lg ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <Users className={`w-5 h-5 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
                       Most Active Users
                     </h3>
                     <div className="space-y-3">
@@ -1333,18 +1476,24 @@ const AdminDashboard = () => {
                               {user.username.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <span className="text-sm font-medium text-gray-700">
+                              <span className={`text-sm font-medium ${
+                              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
                                 {user.username}
                               </span>
                               {user.role && (
-                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                  isDarkMode 
+                                    ? 'bg-blue-900/30 text-blue-300' 
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
                                   {user.role}
                                 </span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div className={`w-16 rounded-full h-2 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                               <div 
                                 className="bg-green-600 h-2 rounded-full"
                                 style={{ 
@@ -1352,7 +1501,9 @@ const AdminDashboard = () => {
                                 }}
                               ></div>
                             </div>
-                            <span className="text-sm font-semibold text-gray-900 w-8 text-right">
+                            <span className={`text-sm font-semibold w-8 text-right ${
+                              isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
                               {user.activity_count}
                             </span>
                           </div>
@@ -1369,10 +1520,17 @@ const AdminDashboard = () => {
         {/* User Activity Chart */}
         <UserActivityChart />
 
+        {/* Premium Oversight Tab */}
+        {activeTab === 'premium' && (
+          <AdminPremiumOversight />
+        )}
+
         {/* ✅ Admin Response Modal */}
         {showResponseModal && selectedReport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
+            <div className={`p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`}>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Admin Response</h2>
                 <button 
@@ -1381,17 +1539,25 @@ const AdminDashboard = () => {
                     setSelectedReport(null);
                     setAdminResponse('');
                   }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className={`text-2xl transition-colors duration-200 ${
+                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
                   ×
                 </button>
               </div>
               
               {/* Report Details */}
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-900">{selectedReport.title}</h3>
-                <p className="text-sm text-gray-600 mb-2">{selectedReport.description}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <h3 className={`font-medium ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{selectedReport.title}</h3>
+                <p className={`text-sm mb-2 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>{selectedReport.description}</p>
+                <div className={`flex items-center gap-4 text-xs ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>
                   <span>User: {selectedReport.username}</span>
                   <span>Category: {selectedReport.category}</span>
                   <span>Priority: {selectedReport.priority}</span>
@@ -1407,13 +1573,15 @@ const AdminDashboard = () => {
                 handleAdminResponse(selectedReport.id, status, response);
               }} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
                     Update Status
                   </label>
                   <select
                     name="status"
                     defaultValue={selectedReport.status}
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>
@@ -1423,7 +1591,9 @@ const AdminDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
                     Admin Response
                   </label>
                   <textarea
@@ -1432,7 +1602,7 @@ const AdminDashboard = () => {
                     defaultValue={adminResponse}
                     required
                     rows="5"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     This response will be visible to the user who submitted the report
@@ -1447,14 +1617,14 @@ const AdminDashboard = () => {
                       setSelectedReport(null);
                       setAdminResponse('');
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:bg-gray-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg disabled:opacity-50 flex items-center gap-2"
+                    className="bg-blue-500 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
                     <Send className="w-4 h-4" />
@@ -1466,7 +1636,7 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 

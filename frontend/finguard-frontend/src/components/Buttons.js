@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Buttons = () => {
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
 
   const handleAddIncome = () => {
     navigate('/income');
@@ -17,7 +19,9 @@ const Buttons = () => {
   };
 
   return (
-    <div className="bg-white py-6">
+    <div className={`py-6 transition-colors duration-300 ${
+      isDarkMode ? 'bg-gray-900' : 'bg-white'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           {/* Add Income Button */}
@@ -55,7 +59,9 @@ const Buttons = () => {
         </div>
         
         {/* Mobile Labels */}
-        <div className="flex sm:hidden justify-center gap-4 mt-2 text-sm text-gray-600">
+        <div className={`flex sm:hidden justify-center gap-4 mt-2 text-sm ${
+          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+        }`}>
           <span className="flex-1 text-center">Add Income</span>
           <span className="flex-1 text-center">Add Expense</span>
           <span className="flex-1 text-center">Liabilities</span>

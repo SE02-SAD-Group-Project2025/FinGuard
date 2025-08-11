@@ -95,6 +95,50 @@ exports.updateUserRole = async (req, res) => {
 
     const user = result.rows[0];
 
+    // If admin assigns Premium User role, create corresponding subscription
+    if (role === 'Premium User' && oldRole !== 'Premium User') {
+      try {
+        // Get premium plan
+        const premiumPlan = await pool.query(`
+          SELECT id FROM subscription_plans 
+          WHERE name = 'premium' AND is_active = true 
+          LIMIT 1
+        `);
+
+        if (premiumPlan.rows.length > 0) {
+          // Check if user already has an active subscription
+          const existingSub = await pool.query(`
+            SELECT id FROM user_subscriptions 
+            WHERE user_id = $1 AND status = 'active'
+          `, [userId]);
+
+          if (existingSub.rows.length === 0) {
+            // Create 1-year premium subscription
+            const periodStart = new Date();
+            const periodEnd = new Date();
+            periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+
+            await pool.query(`
+              INSERT INTO user_subscriptions 
+              (user_id, plan_id, status, billing_cycle, current_period_start, current_period_end, auto_renew)
+              VALUES ($1, $2, 'active', 'yearly', $3, $4, false)
+            `, [userId, premiumPlan.rows[0].id, periodStart, periodEnd]);
+
+            // Log subscription creation
+            await pool.query(`
+              INSERT INTO subscription_history (user_id, old_plan, new_plan, change_reason, changed_by)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [userId, 'free', 'premium', 'Admin role assignment', adminId]);
+
+            console.log(`✅ Created premium subscription for user ${user.username} (admin-assigned)`);
+          }
+        }
+      } catch (subError) {
+        console.error('❌ Failed to create subscription for premium role:', subError);
+        // Don't fail the role update if subscription creation fails
+      }
+    }
+
     // Get admin info for logging
     const adminResult = await pool.query('SELECT username FROM users WHERE id = $1', [adminId]);
     const adminUsername = adminResult.rows[0]?.username || 'Unknown Admin';

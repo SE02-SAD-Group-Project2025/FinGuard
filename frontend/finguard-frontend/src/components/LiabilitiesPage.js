@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
+import { useTheme } from '../contexts/ThemeContext';
 import { 
   CreditCard, 
   Home, 
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 
 const LiabilitiesPage = () => {
+  const { isDarkMode } = useTheme();
   const [liabilities, setLiabilities] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -109,11 +111,11 @@ const LiabilitiesPage = () => {
   // Get liability type color
   const getLiabilityColor = (type) => {
     const colorMap = {
-      'credit_card': 'bg-red-100 text-red-700 border-red-200',
-      'mortgage': 'bg-blue-100 text-blue-700 border-blue-200',
-      'loan': 'bg-green-100 text-green-700 border-green-200',
-      'personal_debt': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      'other': 'bg-gray-100 text-gray-700 border-gray-200'
+      'credit_card': isDarkMode ? 'bg-red-900 text-red-300 border-red-800' : 'bg-red-100 text-red-700 border-red-200',
+      'mortgage': isDarkMode ? 'bg-blue-900 text-blue-300 border-blue-800' : 'bg-blue-100 text-blue-700 border-blue-200',
+      'loan': isDarkMode ? 'bg-green-900 text-green-300 border-green-800' : 'bg-green-100 text-green-700 border-green-200',
+      'personal_debt': isDarkMode ? 'bg-yellow-900 text-yellow-300 border-yellow-800' : 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      'other': isDarkMode ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-700 border-gray-200'
     };
     return colorMap[type] || colorMap['other'];
   };
@@ -359,8 +361,8 @@ const LiabilitiesPage = () => {
     return (
       <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
         type === 'error' 
-          ? 'bg-red-100 text-red-800 border border-red-200' 
-          : 'bg-green-100 text-green-800 border border-green-200'
+          ? isDarkMode ? 'bg-red-900 text-red-300 border border-red-800' : 'bg-red-100 text-red-800 border border-red-200'
+          : isDarkMode ? 'bg-green-900 text-green-300 border border-green-800' : 'bg-green-100 text-green-800 border border-green-200'
       }`}>
         <span className="flex-shrink-0">
           {type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
@@ -382,9 +384,9 @@ const LiabilitiesPage = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Debt & Liabilities</h1>
-            <p className="text-gray-600 mt-1">Track and manage your debts, loans, and payment schedules</p>
-            <p className="text-sm text-gray-500">
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Debt & Liabilities</h1>
+            <p className={`mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Track and manage your debts, loans, and payment schedules</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Total liabilities: {liabilities.length} • Total debt: {summary ? formatCurrency(summary.summary.total_current_balance) : 'Loading...'}
             </p>
           </div>
@@ -413,10 +415,10 @@ const LiabilitiesPage = () => {
         {/* Summary Cards */}
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 font-medium">Total Debt</p>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Total Debt</p>
                   <p className="text-2xl font-bold text-red-600">
                     {formatCurrency(summary.summary.total_current_balance)}
                   </p>
@@ -425,10 +427,10 @@ const LiabilitiesPage = () => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 font-medium">Total Payments</p>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Total Payments</p>
                   <p className="text-2xl font-bold text-green-600">
                     {formatCurrency(summary.payments_summary.total_payments)}
                   </p>
@@ -437,10 +439,10 @@ const LiabilitiesPage = () => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 font-medium">Avg Interest Rate</p>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Avg Interest Rate</p>
                   <p className="text-2xl font-bold text-orange-600">
                     {parseFloat(summary.summary.avg_interest_rate || 0).toFixed(1)}%
                   </p>
@@ -449,10 +451,10 @@ const LiabilitiesPage = () => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 font-medium">Payment Count</p>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Payment Count</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {summary.payments_summary.total_payment_count}
                   </p>
@@ -465,21 +467,21 @@ const LiabilitiesPage = () => {
 
         {/* Upcoming Payments */}
         {summary && summary.upcoming_payments && summary.upcoming_payments.length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className={`${isDarkMode ? 'bg-yellow-900 border-yellow-800' : 'bg-yellow-50 border-yellow-200'} border rounded-lg p-4 mb-6`}>
             <div className="flex items-center gap-2 mb-3">
               <Clock className="w-5 h-5 text-yellow-600" />
-              <h3 className="font-semibold text-yellow-800">Upcoming Payments</h3>
+              <h3 className={`font-semibold ${isDarkMode ? 'text-yellow-300' : 'text-yellow-800'}`}>Upcoming Payments</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {summary.upcoming_payments.map(payment => (
-                <div key={payment.id} className="bg-white p-3 rounded border">
+                <div key={payment.id} className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-3 rounded border`}>
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">{payment.name}</span>
+                    <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{payment.name}</span>
                     <span className="text-yellow-600 font-semibold">
                       {formatCurrency(payment.minimum_payment)}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">Due: Day {payment.due_date}</p>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Due: Day {payment.due_date}</p>
                 </div>
               ))}
             </div>
@@ -487,17 +489,17 @@ const LiabilitiesPage = () => {
         )}
 
         {/* Liabilities List */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Liabilities</h3>
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow`}>
+          <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Your Liabilities</h3>
 
           {loading && liabilities.length === 0 ? (
             <div className="text-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600">Loading your liabilities...</p>
+              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading your liabilities...</p>
             </div>
           ) : liabilities.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <PiggyBank className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <PiggyBank className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
               <p>No liabilities added yet</p>
               <button 
                 onClick={openAddModal}
@@ -518,7 +520,7 @@ const LiabilitiesPage = () => {
                           {getLiabilityIcon(liability.type)}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900">{liability.name}</h4>
+                          <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{liability.name}</h4>
                           <p className="text-sm opacity-75 capitalize">
                             {liability.type.replace('_', ' ')} 
                             {liability.creditor && ` • ${liability.creditor}`}
@@ -603,12 +605,12 @@ const LiabilitiesPage = () => {
         {/* Add Liability Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Add New Liability</h2>
+                <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Add New Liability</h2>
                 <button 
                   onClick={closeAddModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} text-2xl`}
                 >
                   ×
                 </button>
@@ -617,7 +619,7 @@ const LiabilitiesPage = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Name *
                     </label>
                     <input
@@ -627,12 +629,12 @@ const LiabilitiesPage = () => {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Type *
                     </label>
                     <select
@@ -640,7 +642,7 @@ const LiabilitiesPage = () => {
                       value={formData.type}
                       onChange={handleChange}
                       required
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     >
                       <option value="">Select type</option>
                       <option value="credit_card">Credit Card</option>
@@ -653,7 +655,7 @@ const LiabilitiesPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Creditor/Lender
                   </label>
                   <input
@@ -662,13 +664,13 @@ const LiabilitiesPage = () => {
                     placeholder="Bank name or person"
                     value={formData.creditor}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Total Amount *
                     </label>
                     <input
@@ -680,12 +682,12 @@ const LiabilitiesPage = () => {
                       required
                       min="0"
                       step="0.01"
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Current Balance *
                     </label>
                     <input
@@ -697,14 +699,14 @@ const LiabilitiesPage = () => {
                       required
                       min="0"
                       step="0.01"
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Interest Rate (%)
                     </label>
                     <input
@@ -715,12 +717,12 @@ const LiabilitiesPage = () => {
                       onChange={handleChange}
                       min="0"
                       step="0.01"
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Minimum Payment
                     </label>
                     <input
@@ -731,12 +733,12 @@ const LiabilitiesPage = () => {
                       onChange={handleChange}
                       min="0"
                       step="0.01"
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                       Due Date (Day)
                     </label>
                     <input
@@ -747,13 +749,13 @@ const LiabilitiesPage = () => {
                       onChange={handleChange}
                       min="1"
                       max="31"
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                      className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Notes
                   </label>
                   <textarea
@@ -762,7 +764,7 @@ const LiabilitiesPage = () => {
                     value={formData.notes}
                     onChange={handleChange}
                     rows="3"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-red-500 focus:border-red-500`}
                   />
                 </div>
 
@@ -770,7 +772,7 @@ const LiabilitiesPage = () => {
                   <button
                     type="button"
                     onClick={closeAddModal}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className={`px-4 py-2 border ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'} rounded-lg`}
                   >
                     Cancel
                   </button>
@@ -791,27 +793,27 @@ const LiabilitiesPage = () => {
         {/* Record Payment Modal */}
         {showPaymentModal && selectedLiability && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Record Payment</h2>
+                <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Record Payment</h2>
                 <button 
                   onClick={closePaymentModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} text-2xl`}
                 >
                   ×
                 </button>
               </div>
               
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h3 className="font-medium">{selectedLiability.name}</h3>
-                <p className="text-sm text-gray-600">
+              <div className={`mb-4 p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg`}>
+                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedLiability.name}</h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   Current Balance: {formatCurrency(selectedLiability.current_balance)}
                 </p>
               </div>
               
               <form onSubmit={handlePaymentSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Payment Amount *
                   </label>
                   <input
@@ -824,12 +826,12 @@ const LiabilitiesPage = () => {
                     min="0.01"
                     max={selectedLiability.current_balance}
                     step="0.01"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-green-500 focus:border-green-500`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Payment Date *
                   </label>
                   <input
@@ -838,19 +840,19 @@ const LiabilitiesPage = () => {
                     value={paymentData.payment_date}
                     onChange={handlePaymentChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-green-500 focus:border-green-500`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Payment Type
                   </label>
                   <select
                     name="payment_type"
                     value={paymentData.payment_type}
                     onChange={handlePaymentChange}
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-green-500 focus:border-green-500`}
                   >
                     <option value="regular">Regular Payment</option>
                     <option value="minimum">Minimum Payment</option>
@@ -859,7 +861,7 @@ const LiabilitiesPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Description
                   </label>
                   <textarea
@@ -868,7 +870,7 @@ const LiabilitiesPage = () => {
                     value={paymentData.description}
                     onChange={handlePaymentChange}
                     rows="2"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-green-500 focus:border-green-500`}
                   />
                 </div>
 
@@ -876,7 +878,7 @@ const LiabilitiesPage = () => {
                   <button
                     type="button"
                     onClick={closePaymentModal}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className={`px-4 py-2 border ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'} rounded-lg`}
                   >
                     Cancel
                   </button>
@@ -897,20 +899,20 @@ const LiabilitiesPage = () => {
         {/* Payoff Calculator Modal */}
         {showPayoffModal && selectedLiability && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[700px] max-h-[90vh] overflow-y-auto">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg w-[700px] max-h-[90vh] overflow-y-auto`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Debt Payoff Calculator</h2>
+                <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Debt Payoff Calculator</h2>
                 <button 
                   onClick={closePayoffModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} text-2xl`}
                 >
                   ×
                 </button>
               </div>
               
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h3 className="font-medium">{selectedLiability.name}</h3>
-                <p className="text-sm text-gray-600">
+              <div className={`mb-4 p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg`}>
+                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedLiability.name}</h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   Balance: {formatCurrency(selectedLiability.current_balance)} | 
                   Interest: {selectedLiability.interest_rate || 0}% | 
                   Min Payment: {formatCurrency(selectedLiability.minimum_payment || 0)}
@@ -918,7 +920,7 @@ const LiabilitiesPage = () => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                   Extra Monthly Payment
                 </label>
                 <input
@@ -927,16 +929,16 @@ const LiabilitiesPage = () => {
                   min="0"
                   step="0.01"
                   onChange={(e) => fetchPayoffScenarios(selectedLiability.id, e.target.value)}
-                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500`}
                 />
               </div>
 
               {payoffScenarios && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Payoff Scenarios</h3>
+                  <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Payoff Scenarios</h3>
                   {payoffScenarios.scenarios.map((scenario, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                      <h4 className="font-medium text-gray-900 mb-2">{scenario.name}</h4>
+                    <div key={index} className={`p-4 border ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-white'} rounded-lg`}>
+                      <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>{scenario.name}</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p>Monthly Payment: <span className="font-medium">{formatCurrency(scenario.monthly_payment)}</span></p>
@@ -963,7 +965,7 @@ const LiabilitiesPage = () => {
               <div className="flex justify-end pt-4">
                 <button
                   onClick={closePayoffModal}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                  className={`px-4 py-2 border ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'} rounded-lg`}
                 >
                   Close
                 </button>

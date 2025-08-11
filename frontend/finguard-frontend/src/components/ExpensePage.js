@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowDownIcon, ExclamationTriangleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { Brain, WifiOff } from 'lucide-react';
 import ExpenseChart from './ExpenseChart';
 import RecentExpenses from './RecentExpenses';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
+import autoCategorizationService from '../services/autoCategorizationService';
+import { useTheme } from '../contexts/ThemeContext';
+import { useOfflineHandler } from '../hooks/useOfflineHandler';
+import { SkeletonPage, SkeletonStatsCard, SkeletonChart, SkeletonTable } from './LoadingSkeleton';
 
 const ExpensePage = () => {
+  const { isDarkMode } = useTheme();
+  const { isOnline, makeOfflineCapableRequest } = useOfflineHandler();
   const [isExpensePopupOpen, setIsExpensePopupOpen] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -16,6 +23,9 @@ const ExpensePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [monthlySummary, setMonthlySummary] = useState({ income: 0, expenses: 0, balance: 0 });
+  const [categorySuggestions, setCategorySuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [autoCategorizationEnabled, setAutoCategorizationEnabled] = useState(true);
 
   const [formData, setFormData] = useState({
     category: '',
@@ -87,49 +97,103 @@ const ExpensePage = () => {
     ];
   };
 
-  // Fetch all data
+  // Fetch all data with offline support
   const fetchAllData = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // Fetch transactions (expenses)
-      const transactionsData = await apiCall('/api/transactions');
-      if (transactionsData) {
-        const expenseData = transactionsData.filter(tx => tx.type === 'expense');
+      // Fetch transactions (expenses) with offline fallback
+      const token = getToken();
+      const transactionsResult = await makeOfflineCapableRequest({
+        endpoint: 'http://localhost:5000/api/transactions',
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        offlineKey: 'expenses-transactions',
+        description: 'Load expenses data'
+      });
+      
+      if (transactionsResult.data) {
+        const expenseData = transactionsResult.data.filter(tx => tx.type === 'expense');
         setExpenses(expenseData);
       }
 
       // Use predefined expense categories only
       setCategories(getPredefinedExpenseCategories());
 
-      // Fetch current month budgets
-      const budgetsData = await apiCall(`/api/budgets?month=${currentMonth}&year=${currentYear}`);
-      if (budgetsData) {
-        setBudgets(budgetsData);
+      // Fetch current month budgets with offline fallback
+      const budgetsResult = await makeOfflineCapableRequest({
+        endpoint: `http://localhost:5000/api/budgets?month=${currentMonth}&year=${currentYear}`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        offlineKey: `budgets-${currentMonth}-${currentYear}`,
+        description: 'Load budgets data'
+      });
+      
+      if (budgetsResult.data) {
+        setBudgets(budgetsResult.data);
       }
 
-      // Fetch budget summary (spending vs limits)
-      const summaryData = await apiCall(`/api/budgets/summary?month=${currentMonth}&year=${currentYear}`);
-      if (summaryData) {
-        setBudgetSummary(summaryData);
+      // Fetch budget summary with offline fallback
+      const summaryResult = await makeOfflineCapableRequest({
+        endpoint: `http://localhost:5000/api/budgets/summary?month=${currentMonth}&year=${currentYear}`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        offlineKey: `budget-summary-${currentMonth}-${currentYear}`,
+        description: 'Load budget summary'
+      });
+      
+      if (summaryResult.data) {
+        setBudgetSummary(summaryResult.data);
       }
 
-      // Fetch budget alerts
-      const alertsData = await apiCall('/api/budgets/alerts');
-      if (alertsData) {
-        setBudgetAlerts(alertsData);
+      // Fetch budget alerts with offline fallback
+      const alertsResult = await makeOfflineCapableRequest({
+        endpoint: 'http://localhost:5000/api/budgets/alerts',
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        offlineKey: 'budget-alerts',
+        description: 'Load budget alerts'
+      });
+      
+      if (alertsResult.data) {
+        setBudgetAlerts(alertsResult.data);
       }
 
-      // Fetch monthly summary
-      const monthlyData = await apiCall(`/api/summary?month=${currentMonth}&year=${currentYear}`);
-      if (monthlyData) {
-        setMonthlySummary(monthlyData);
+      // Fetch monthly summary with offline fallback
+      const monthlyResult = await makeOfflineCapableRequest({
+        endpoint: `http://localhost:5000/api/summary?month=${currentMonth}&year=${currentYear}`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        offlineKey: `monthly-summary-${currentMonth}-${currentYear}`,
+        description: 'Load monthly summary'
+      });
+      
+      if (monthlyResult.data) {
+        setMonthlySummary(monthlyResult.data);
       }
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load data. Please refresh the page.');
+      const errorMessage = isOnline ? 
+        'Failed to load data. Please refresh the page.' :
+        'Offline mode: Some data may not be current.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -218,6 +282,40 @@ const ExpensePage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Auto-suggest categories when description changes
+    if (name === 'description' && value && autoCategorizationEnabled) {
+      suggestCategory({ description: value, amount: formData.amount });
+    }
+  };
+
+  // Get category suggestions
+  const suggestCategory = (transactionData) => {
+    if (!transactionData.description) {
+      setCategorySuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      const suggestions = autoCategorizationService.getCategorysuggestions(transactionData);
+      if (suggestions && suggestions.alternatives && suggestions.alternatives.length > 0) {
+        setCategorySuggestions([suggestions.primary, ...suggestions.alternatives]);
+        setShowSuggestions(true);
+      } else {
+        setCategorySuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error('Error getting category suggestions:', error);
+    }
+  };
+
+  // Apply suggested category
+  const applySuggestedCategory = (suggestion) => {
+    setFormData(prev => ({ ...prev, category: suggestion.category }));
+    setShowSuggestions(false);
+    setCategorySuggestions([]);
   };
 
   const handleSubmit = async (e) => {
@@ -239,13 +337,31 @@ const ExpensePage = () => {
     };
 
     try {
-      const response = await apiCall('/api/transactions', {
+      const result = await makeOfflineCapableRequest({
+        endpoint: '/api/transactions',
         method: 'POST',
-        body: JSON.stringify(payload)
+        data: payload,
+        description: `Add expense: ${formData.description || 'Expense'} - $${formData.amount}`
       });
 
-      if (response) {
+      if (result.queued) {
+        setSuccess('Expense queued - will be saved when connection is restored!');
+      } else if (result.data) {
         setSuccess('Expense added successfully!');
+        
+        // Learn from this transaction for auto-categorization
+        if (autoCategorizationEnabled) {
+          try {
+            autoCategorizationService.learnFromTransaction({
+              description: formData.description,
+              category: formData.category,
+              amount: -parseFloat(formData.amount), // Negative for expenses
+              date: formData.date
+            });
+          } catch (error) {
+            console.error('Error learning from transaction:', error);
+          }
+        }
         
         // Check if this will trigger a budget alert
         const budgetStatus = getBudgetStatus(formData.category);
@@ -321,11 +437,24 @@ const ExpensePage = () => {
     );
   };
 
+  // Show skeleton loading for initial load
+  if (loading && expenses.length === 0) {
+    return <SkeletonPage />;
+  }
+
   return (
     <AnimatedPage>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Navbar />
         
+        {/* Offline Status */}
+        {!isOnline && (
+          <div className="mb-4 p-4 rounded-lg flex items-center gap-2 bg-yellow-100 text-yellow-800 border border-yellow-200">
+            <WifiOff className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1">You are currently offline. Changes will be synced when connection is restored.</span>
+          </div>
+        )}
+
         {/* Messages */}
         <MessageAlert message={error} type="error" />
         <MessageAlert message={success} type="success" />
@@ -333,16 +462,22 @@ const ExpensePage = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Expense Management</h1>
-            <p className="text-gray-600 mt-1">Track your spending and monitor budget limits</p>
-            <p className="text-sm text-gray-500">
+            <h1 className={`text-3xl font-bold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Expense Management</h1>
+            <p className={`mt-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-600'
+            }`}>Track your spending and monitor budget limits</p>
+            <p className={`text-sm ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
               Categories: {categories.length} available • Budgets: {budgets.length} set
             </p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => window.location.href = '/budget'}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+              className="bg-blue-500 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
             >
               <Cog6ToothIcon className="h-4 w-4" />
               Manage Budgets
@@ -358,8 +493,12 @@ const ExpensePage = () => {
         </div>
 
         {/* Monthly Summary */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Summary ({currentMonth}/{currentYear})</h3>
+        <div className={`p-6 rounded-lg shadow mb-6 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>Monthly Summary ({currentMonth}/{currentYear})</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-green-50 rounded-lg">
               <p className="text-green-700 font-medium">Total Income</p>
@@ -373,7 +512,7 @@ const ExpensePage = () => {
                 LKR {monthlySummary.expenses?.toLocaleString() || '0'}
               </p>
             </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="p-4 bg-blue-50 hover:bg-blue-50 dark:bg-blue-50 dark:hover:bg-blue-50 rounded-lg">
               <p className="text-blue-700 font-medium">Net Balance</p>
               <p className={`text-2xl font-bold ${
                 monthlySummary.balance >= 0 ? 'text-green-800' : 'text-red-800'
@@ -407,9 +546,13 @@ const ExpensePage = () => {
         )}
 
         {/* Category Budget Status Grid */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <div className={`p-6 rounded-lg shadow mb-6 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        }`}>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Budget Status by Category</h3>
+            <h3 className={`text-lg font-semibold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Budget Status by Category</h3>
             <button 
               onClick={() => window.location.href = '/budget'}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium"
@@ -419,7 +562,9 @@ const ExpensePage = () => {
           </div>
           
           {categories.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className={`text-center py-8 ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
               <p>Loading categories...</p>
             </div>
           ) : (
@@ -429,10 +574,12 @@ const ExpensePage = () => {
                 const hasAlert = hasActiveAlert(category.name);
                 
                 return (
-                  <div key={category.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div key={category.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-xl">{getCategoryIcon(category.name)}</span>
-                      <span className="font-medium text-gray-900">{category.name}</span>
+                      <span className={`font-medium ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>{category.name}</span>
                       {hasAlert && (
                         <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
                           Alert!
@@ -443,19 +590,25 @@ const ExpensePage = () => {
                     {budgetStatus ? (
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Spent:</span>
-                          <span className={`font-medium ${budgetStatus.isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
+                          <span className={`${
+                            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                          }`}>Spent:</span>
+                          <span className={`font-medium ${budgetStatus.isOverBudget ? 'text-red-600' : (isDarkMode ? 'text-white' : 'text-gray-900')}`}>
                             LKR {budgetStatus.spent.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Budget:</span>
-                          <span className="font-medium text-gray-900">LKR {budgetStatus.limit.toFixed(2)}</span>
+                          <span className={`${
+                            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                          }`}>Budget:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">LKR {budgetStatus.limit.toFixed(2)}</span>
                         </div>
                         
                         {/* Progress Bar */}
                         <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-gray-600">
+                          <div className={`flex justify-between text-xs ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
                             <span>Progress</span>
                             <span>{budgetStatus.percentage.toFixed(0)}%</span>
                           </div>
@@ -500,12 +653,14 @@ const ExpensePage = () => {
         {/* Add Expense Modal */}
         {isExpensePopupOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto">
+            <div className={`p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`}>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Add New Expense</h2>
                 <button 
                   onClick={closeExpensePopup}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-200 text-2xl"
                 >
                   ×
                 </button>
@@ -513,7 +668,7 @@ const ExpensePage = () => {
               
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Category * <span className="text-xs text-gray-500">({categories.length} available)</span>
                   </label>
                   <select
@@ -521,7 +676,7 @@ const ExpensePage = () => {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
                   >
                     <option value="">Select Category</option>
                     {categories.map(cat => {
@@ -535,16 +690,53 @@ const ExpensePage = () => {
                     })}
                   </select>
                   {formData.category && getBudgetStatus(formData.category) && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                    <div className="mt-2 p-2 bg-blue-50 hover:bg-blue-50 dark:bg-blue-50 dark:hover:bg-blue-50 rounded text-sm">
                       <p className="text-blue-700">
                         💰 Budget remaining: LKR {getBudgetStatus(formData.category).remaining.toFixed(2)}
                       </p>
                     </div>
                   )}
+                  
+                  {/* AI Category Suggestions */}
+                  {showSuggestions && categorySuggestions.length > 0 && (
+                    <div className="mt-2 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center mb-2">
+                        <Brain className="w-4 h-4 text-blue-600 mr-2" />
+                        <span className="text-sm font-medium text-blue-800">AI Category Suggestions</span>
+                      </div>
+                      <div className="space-y-1">
+                        {categorySuggestions.slice(0, 3).map((suggestion, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => applySuggestedCategory(suggestion)}
+                            className="w-full text-left px-3 py-2 bg-white dark:bg-gray-800 hover:bg-blue-100 hover:bg-blue-100 dark:bg-blue-100 dark:hover:bg-blue-100 rounded border border-blue-200 transition-colors flex items-center justify-between"
+                          >
+                            <span className="font-medium text-gray-800 dark:text-gray-100">{suggestion.category}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-xs ${
+                                isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
+                                {Math.round((suggestion.confidence || 0) * 100)}% confidence
+                              </span>
+                              <span className="text-blue-600 text-xs">Apply</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAutoCategorizationEnabled(!autoCategorizationEnabled)}
+                        className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-200"
+                      >
+                        {autoCategorizationEnabled ? 'Disable' : 'Enable'} AI suggestions
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (LKR) *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount (LKR) *</label>
                   <input
                     type="number"
                     name="amount"
@@ -554,7 +746,7 @@ const ExpensePage = () => {
                     required
                     min="0"
                     step="0.01"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
                   />
                   {formData.amount && formData.category && getBudgetStatus(formData.category) && (
                     <div className="mt-1">
@@ -568,26 +760,26 @@ const ExpensePage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Date *</label>
                   <input
                     type="date"
                     name="date"
                     value={formData.date}
                     onChange={handleChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
                   <textarea
                     name="description"
                     placeholder="What was this expense for?"
                     value={formData.description}
                     onChange={handleChange}
                     rows="3"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-red-500 focus:border-red-500"
                   />
                 </div>
 
@@ -595,7 +787,7 @@ const ExpensePage = () => {
                   <button
                     type="button"
                     onClick={closeExpensePopup}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:bg-gray-800"
                   >
                     Cancel
                   </button>
@@ -614,23 +806,38 @@ const ExpensePage = () => {
         )}
 
         {/* Recent Expenses */}
-        <RecentExpenses
-          expenses={expenses}
-          onExpenseEdit={handleExpenseEdit}
-          onExpenseDelete={handleExpenseDelete}
-        />
+        {loading ? (
+          <SkeletonTable rows={8} cols={5} className="mt-6" />
+        ) : (
+          <RecentExpenses
+            expenses={expenses}
+            onExpenseEdit={handleExpenseEdit}
+            onExpenseDelete={handleExpenseDelete}
+          />
+        )}
 
         {/* Quick Stats */}
-        <div className="bg-white p-6 rounded-lg shadow mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Statistics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonStatsCard key={index} />
+            ))}
+          </div>
+        ) : (
+          <div className={`p-6 rounded-lg shadow mt-6 transition-colors duration-300 ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Quick Statistics</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
             <div className="p-4 bg-red-50 rounded-lg">
               <p className="text-red-700 font-medium">Total Expenses</p>
               <p className="text-2xl font-bold text-red-800">
                 {expenses.length}
               </p>
             </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="p-4 bg-blue-50 hover:bg-blue-50 dark:bg-blue-50 dark:hover:bg-blue-50 rounded-lg">
               <p className="text-blue-700 font-medium">Categories Used</p>
               <p className="text-2xl font-bold text-blue-800">
                 {new Set(expenses.map(e => e.category)).size}
@@ -649,7 +856,8 @@ const ExpensePage = () => {
               </p>
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </div>
     </AnimatedPage>
   );

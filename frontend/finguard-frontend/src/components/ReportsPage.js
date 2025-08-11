@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
+import { useTheme } from '../contexts/ThemeContext';
 import { 
   Bug, 
   Lightbulb, 
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const ReportsPage = () => {
+  const { isDarkMode } = useTheme();
   const [reports, setReports] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -90,10 +92,10 @@ const ReportsPage = () => {
   // Get priority color
   const getPriorityColor = (priority) => {
     const colors = {
-      'low': 'text-gray-600 bg-gray-100',
-      'medium': 'text-blue-600 bg-blue-100',
-      'high': 'text-orange-600 bg-orange-100',
-      'urgent': 'text-red-600 bg-red-100'
+      'low': isDarkMode ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-100',
+      'medium': isDarkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-100',
+      'high': isDarkMode ? 'text-orange-300 bg-orange-900' : 'text-orange-600 bg-orange-100',
+      'urgent': isDarkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-100'
     };
     return colors[priority] || colors['medium'];
   };
@@ -101,10 +103,10 @@ const ReportsPage = () => {
   // Get status color
   const getStatusColor = (status) => {
     const colors = {
-      'pending': 'text-yellow-600 bg-yellow-100',
-      'in_progress': 'text-blue-600 bg-blue-100',
-      'resolved': 'text-green-600 bg-green-100',
-      'closed': 'text-gray-600 bg-gray-100'
+      'pending': isDarkMode ? 'text-yellow-300 bg-yellow-900' : 'text-yellow-600 bg-yellow-100',
+      'in_progress': isDarkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-100',
+      'resolved': isDarkMode ? 'text-green-300 bg-green-900' : 'text-green-600 bg-green-100',
+      'closed': isDarkMode ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-100'
     };
     return colors[status] || colors['pending'];
   };
@@ -278,8 +280,8 @@ const ReportsPage = () => {
     return (
       <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
         type === 'error' 
-          ? 'bg-red-100 text-red-800 border border-red-200' 
-          : 'bg-green-100 text-green-800 border border-green-200'
+          ? isDarkMode ? 'bg-red-900 text-red-300 border border-red-800' : 'bg-red-100 text-red-800 border border-red-200'
+          : isDarkMode ? 'bg-green-900 text-green-300 border border-green-800' : 'bg-green-100 text-green-800 border border-green-200'
       }`}>
         <span className="flex-shrink-0">
           {type === 'error' ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
@@ -301,9 +303,9 @@ const ReportsPage = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Support & Reports</h1>
-            <p className="text-gray-600 mt-1">Submit feedback, report issues, or request new features</p>
-            <p className="text-sm text-gray-500">
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Support & Reports</h1>
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>Submit feedback, report issues, or request new features</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Total reports: {reports.length} • Available categories: {categories.length}
             </p>
           </div>
@@ -327,8 +329,8 @@ const ReportsPage = () => {
         </div>
 
         {/* Quick Report Categories */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Report Categories</h3>
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow mb-6`}>
+          <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Quick Report Categories</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map(category => (
               <button
@@ -337,15 +339,15 @@ const ReportsPage = () => {
                   setFormData(prev => ({ ...prev, category: category.name }));
                   openModal();
                 }}
-                className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-left group"
+                className={`p-4 border ${isDarkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} rounded-lg hover:shadow-md transition-shadow text-left group`}
               >
                 <div className="flex items-center gap-3 mb-2">
                   {getCategoryIcon(category.name)}
-                  <span className="font-medium text-gray-900 capitalize">
+                  <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} capitalize`}>
                     {category.name.replace('_', ' ')}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {category.description}
                 </p>
               </button>
@@ -354,19 +356,19 @@ const ReportsPage = () => {
         </div>
 
         {/* Reports List */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow`}>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Your Reports ({reports.length})</h3>
+            <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Your Reports ({reports.length})</h3>
           </div>
 
           {loading && reports.length === 0 ? (
             <div className="text-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600">Loading your reports...</p>
+              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading your reports...</p>
             </div>
           ) : reports.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <MessageCircle className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
               <p>No reports submitted yet</p>
               <button 
                 onClick={() => openModal()}
@@ -378,7 +380,7 @@ const ReportsPage = () => {
           ) : (
             <div className="space-y-4">
               {reports.map(report => (
-                <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div key={report.id} className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-white'} rounded-lg p-4 hover:shadow-md transition-shadow`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
                       <div className="mt-1">
@@ -386,7 +388,7 @@ const ReportsPage = () => {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-gray-900">{report.title}</h4>
+                          <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{report.title}</h4>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(report.priority)}`}>
                             {report.priority}
                           </span>
@@ -395,9 +397,9 @@ const ReportsPage = () => {
                           </span>
                         </div>
                         
-                        <p className="text-gray-600 mb-3 line-clamp-2">{report.description}</p>
+                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-3 line-clamp-2`}>{report.description}</p>
                         
-                        <div className="text-sm text-gray-500">
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <div className="flex items-center gap-4">
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
@@ -413,14 +415,14 @@ const ReportsPage = () => {
 
                         {/* Admin Response */}
                         {report.admin_response && (
-                          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                          <div className={`mt-3 p-3 ${isDarkMode ? 'bg-blue-900 bg-opacity-50' : 'bg-blue-50'} rounded-lg`}>
                             <div className="flex items-center gap-2 mb-1">
                               <Shield className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-800">
+                              <span className={`text-sm font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>
                                 Admin Response {report.admin_username && `by ${report.admin_username}`}
                               </span>
                             </div>
-                            <p className="text-sm text-blue-700">{report.admin_response}</p>
+                            <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>{report.admin_response}</p>
                           </div>
                         )}
                       </div>
@@ -432,14 +434,14 @@ const ReportsPage = () => {
                         <>
                           <button
                             onClick={() => openModal(report)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                            className={`p-2 text-blue-600 ${isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50'} rounded`}
                             title="Edit report"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(report.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded"
+                            className={`p-2 text-red-600 ${isDarkMode ? 'hover:bg-red-900' : 'hover:bg-red-50'} rounded`}
                             title="Delete report"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -457,14 +459,14 @@ const ReportsPage = () => {
         {/* Submit/Edit Report Modal */}
         {showReportModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">
+                <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   {editingReport ? 'Edit Report' : 'Submit New Report'}
                 </h2>
                 <button 
                   onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} text-2xl`}
                 >
                   ×
                 </button>
@@ -472,7 +474,7 @@ const ReportsPage = () => {
               
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Title *
                   </label>
                   <input
@@ -482,12 +484,12 @@ const ReportsPage = () => {
                     value={formData.title}
                     onChange={handleChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Category *
                   </label>
                   <select
@@ -495,7 +497,7 @@ const ReportsPage = () => {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500`}
                   >
                     <option value="">Select a category</option>
                     {categories.map(cat => (
@@ -507,14 +509,14 @@ const ReportsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Priority
                   </label>
                   <select
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500`}
                   >
                     <option value="low">Low - Minor issue or suggestion</option>
                     <option value="medium">Medium - Standard issue</option>
@@ -524,7 +526,7 @@ const ReportsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     Description *
                   </label>
                   <textarea
@@ -534,9 +536,9 @@ const ReportsPage = () => {
                     onChange={handleChange}
                     required
                     rows="5"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'} p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500`}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                     Include steps to reproduce (for bugs), expected behavior, or detailed feature requirements
                   </p>
                 </div>
@@ -545,7 +547,7 @@ const ReportsPage = () => {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className={`px-4 py-2 border ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'} rounded-lg`}
                   >
                     Cancel
                   </button>

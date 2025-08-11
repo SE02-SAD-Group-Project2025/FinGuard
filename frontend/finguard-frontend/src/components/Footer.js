@@ -5,6 +5,9 @@ const Footer = () => {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
 
+  // Common button classes for footer links
+  const footerButtonClass = "hover:text-green-400 transition-colors duration-300 text-left focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:ring-offset-green-800 rounded px-1";
+
   const handleNewsletterSubmit = (e) => {
     e.preventDefault();
     if (email) {
@@ -24,18 +27,23 @@ const Footer = () => {
             Get the latest financial tips and exclusive features delivered to your inbox.
           </p>
           
-          <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+          <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto" aria-label="Newsletter signup">
+            <label htmlFor="newsletter-email" className="sr-only">Email address for newsletter</label>
             <input
+              id="newsletter-email"
               type="email"
               placeholder="Enter your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="flex-1 px-4 py-3 rounded-lg text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-green-300"
               required
+              aria-describedby="newsletter-description"
             />
+            <p id="newsletter-description" className="sr-only">Enter your email to receive financial tips and updates</p>
             <button
               type="submit"
-              className="bg-white text-green-800 font-bold px-6 py-3 rounded-lg hover:bg-green-100 transform hover:-translate-y-0.5 transition-all duration-300"
+              className="bg-white text-green-800 font-bold px-6 py-3 rounded-lg hover:bg-green-100 transform hover:-translate-y-0.5 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-300"
+              aria-label={isSubscribed ? 'Successfully subscribed to newsletter' : 'Subscribe to newsletter'}
             >
               {isSubscribed ? '✅ Subscribed!' : 'Subscribe'}
             </button>
@@ -50,71 +58,71 @@ const Footer = () => {
         </p>
 
         {/* Enhanced Social Media Icons - keeping original styling but adding hover animations */}
-        <div className="flex justify-center gap-6 mb-10 text-2xl">
-          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
-            <FaFacebook className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300" />
+        <div className="flex justify-center gap-6 mb-10 text-2xl" role="list" aria-label="Follow us on social media">
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Follow FinGuard on Facebook">
+            <FaFacebook className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:ring-offset-green-800 rounded" />
           </a>
-          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
-            <FaTwitter className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300" />
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Follow FinGuard on Twitter">
+            <FaTwitter className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:ring-offset-green-800 rounded" />
           </a>
-          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
-            <FaLinkedin className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300" />
+          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="Follow FinGuard on LinkedIn">
+            <FaLinkedin className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:ring-offset-green-800 rounded" />
           </a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
-            <FaInstagram className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300" />
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Follow FinGuard on Instagram">
+            <FaInstagram className="text-white hover:text-green-400 cursor-pointer transform hover:scale-125 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-offset-2 focus:ring-offset-green-800 rounded" />
           </a>
         </div>
 
         {/* Original Footer Links - keeping exact same styling */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-sm text-center md:text-left">
+        <nav className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-sm text-center md:text-left" role="navigation" aria-label="Footer navigation">
           {/* Features */}
           <div>
-            <h3 className="font-bold mb-2">Features</h3>
-            <ul className="space-y-1">
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">AI-Powered Budgeting</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Smart Expense Tracking</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Debt Management Tools</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Savings Goals</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Bill Reminders</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Financial Analytics</a></li>
+            <h3 className="font-bold mb-2" id="features-heading">Features</h3>
+            <ul className="space-y-1" aria-labelledby="features-heading">
+              <li><button className={footerButtonClass} aria-label="Learn more about AI-Powered Budgeting">AI-Powered Budgeting</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Smart Expense Tracking">Smart Expense Tracking</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Debt Management Tools">Debt Management Tools</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Savings Goals">Savings Goals</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Bill Reminders">Bill Reminders</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Financial Analytics">Financial Analytics</button></li>
             </ul>
           </div>
 
           {/* Premium AI */}
           <div>
-            <h3 className="font-bold mb-2">Premium AI</h3>
-            <ul className="space-y-1">
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Deep User Profiling</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Priority Recommendations</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Advance Analytics</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Personal AI Coach</a></li>
+            <h3 className="font-bold mb-2" id="premium-ai-heading">Premium AI</h3>
+            <ul className="space-y-1" aria-labelledby="premium-ai-heading">
+              <li><button className={footerButtonClass} aria-label="Learn more about Deep User Profiling">Deep User Profiling</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Priority Recommendations">Priority Recommendations</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Advanced Analytics">Advanced Analytics</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn more about Personal AI Coach">Personal AI Coach</button></li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h3 className="font-bold mb-2">Company</h3>
-            <ul className="space-y-1">
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">About Us</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Our Mission</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Careers</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Contact</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Blog</a></li>
+            <h3 className="font-bold mb-2" id="company-heading">Company</h3>
+            <ul className="space-y-1" aria-labelledby="company-heading">
+              <li><button className={footerButtonClass} aria-label="Learn more about us">About Us</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn about our mission">Our Mission</button></li>
+              <li><button className={footerButtonClass} aria-label="View career opportunities">Careers</button></li>
+              <li><button className={footerButtonClass} aria-label="Contact us">Contact</button></li>
+              <li><button className={footerButtonClass} aria-label="Read our blog">Blog</button></li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h3 className="font-bold mb-2">Support</h3>
-            <ul className="space-y-1">
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Help Center</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Data Protection</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors duration-300">Cookie Policy</a></li>
+            <h3 className="font-bold mb-2" id="support-heading">Support</h3>
+            <ul className="space-y-1" aria-labelledby="support-heading">
+              <li><button className={footerButtonClass} aria-label="Get help and support">Help Center</button></li>
+              <li><button className={footerButtonClass} aria-label="Read our privacy policy">Privacy Policy</button></li>
+              <li><button className={footerButtonClass} aria-label="View terms of service">Terms of Service</button></li>
+              <li><button className={footerButtonClass} aria-label="Learn about data protection">Data Protection</button></li>
+              <li><button className={footerButtonClass} aria-label="View cookie policy">Cookie Policy</button></li>
             </ul>
           </div>
-        </div>
+        </nav>
 
         {/* Trust badges - NEW FEATURE but with original colors */}
         <div className="border-t border-green-600 pt-6 mt-8 mb-6">

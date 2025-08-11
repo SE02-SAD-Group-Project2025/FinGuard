@@ -9,10 +9,11 @@ const transporter = nodemailer.createTransport({  // ← Fixed: removed 'r' from
   },
 });
 
-// Verify transporter
+// Verify transporter (with error handling to prevent crashes)
 transporter.verify((error, success) => {
   if (error) {
     console.error('❌ Gmail transporter failed:', error.message);
+    // Don't throw or crash the server
   } else {
     console.log('✅ Gmail transporter is ready');
   }

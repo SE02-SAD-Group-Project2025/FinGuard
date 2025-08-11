@@ -12,11 +12,14 @@ import Cards from './Cards';
 import Buttons from './Buttons';
 import RecentTransactions from './RecentTransactions';
 import AnimatedPage from './AnimatedPage';
+import FinancialHealthScore from './FinancialHealthScore';
+import QuickExpenseButton from './QuickExpenseButton';
+import { useTheme } from '../contexts/ThemeContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// ✨ Improved chart options with better styling
-const chartOptions = {
+// ✨ Theme-aware chart options
+const getChartOptions = (isDarkMode) => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -33,10 +36,10 @@ const chartOptions = {
           return `${label}: ${percentage}% (Rs. ${value.toLocaleString()})`;
         }
       },
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      titleColor: '#fff',
-      bodyColor: '#fff',
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+      titleColor: isDarkMode ? '#fff' : '#000',
+      bodyColor: isDarkMode ? '#fff' : '#000',
+      borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
       borderWidth: 1,
     }
   },
@@ -44,9 +47,12 @@ const chartOptions = {
     animateRotate: true,
     animateScale: true,
   },
-};
+});
 
 const Dashboard = () => {
+  // 🎨 Theme context
+  const { isDarkMode } = useTheme();
+  
   // 🔄 Keep all original backend state management
   const [expenseChartData, setExpenseChartData] = useState(null);
   const [incomeChartData, setIncomeChartData] = useState(null);
@@ -165,21 +171,31 @@ const Dashboard = () => {
   // 📊 Loading state component
   const ChartSkeleton = () => (
     <div className="animate-pulse">
-      <div className="w-full h-64 bg-gray-200 rounded-full mx-auto"></div>
+      <div className={`w-full h-64 rounded-full mx-auto ${
+        isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+      }`}></div>
       <div className="mt-4 space-y-2">
-        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+        <div className={`h-4 rounded w-3/4 mx-auto ${
+          isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+        }`}></div>
+        <div className={`h-4 rounded w-1/2 mx-auto ${
+          isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+        }`}></div>
       </div>
     </div>
   );
 
   return (
     <AnimatedPage>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-screen transition-colors ${
+        isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
+      }`}>
         <Navbar />
         
         {/* 🎯 Keep original welcome message but make it dynamic */}
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back!</h1>
+        <h1 className={`text-3xl font-bold ${
+          isDarkMode ? 'text-white' : 'text-gray-900'
+        }`}>Welcome back!</h1>
         
         {/* 🔄 Pass liabilities summary to Cards component */}
         <Cards summary={summary} liabilitiesSummary={liabilitiesSummary} />
@@ -187,8 +203,12 @@ const Dashboard = () => {
 
         {/* ✨ Improved section title */}
         <div className="mt-8 mb-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900">Your Income And Expense Summary</h2>
-          <p className="text-gray-600 mt-2">
+          <h2 className={`text-3xl font-bold ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>Your Income And Expense Summary</h2>
+          <p className={`mt-2 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
             {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </p>
         </div>
@@ -197,9 +217,15 @@ const Dashboard = () => {
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           {/* 📊 Expense Chart - Enhanced Design */}
-          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+          <div className={`p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-700' 
+              : 'bg-white border-gray-100'
+          }`}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-800">Expense Categories</h3>
+              <h3 className={`text-xl font-semibold ${
+                isDarkMode ? 'text-white' : 'text-gray-800'
+              }`}>Expense Categories</h3>
               <div className="w-4 h-4 bg-red-500 rounded-full"></div>
             </div>
             
@@ -207,14 +233,20 @@ const Dashboard = () => {
               {loading ? (
                 <ChartSkeleton />
               ) : expenseChartData && expenseChartData.labels.length > 0 ? (
-                <Pie data={expenseChartData} options={chartOptions} />
+                <Pie data={expenseChartData} options={getChartOptions(isDarkMode)} />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <div className={`flex flex-col items-center justify-center h-full ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                    isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+                  }`}>
                     <span className="text-2xl">📊</span>
                   </div>
                   <p className="text-center">No expense data available</p>
-                  <p className="text-sm text-gray-400 mt-1">Start adding expenses to see your spending breakdown</p>
+                  <p className={`text-sm mt-1 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                  }`}>Start adding expenses to see your spending breakdown</p>
                 </div>
               )}
             </div>
@@ -228,7 +260,9 @@ const Dashboard = () => {
                       className="w-3 h-3 rounded-full mr-2"
                       style={{ backgroundColor: expenseChartData.datasets[0].backgroundColor[index] }}
                     ></div>
-                    <span className="text-sm text-gray-600 truncate">{label}</span>
+                    <span className={`text-sm truncate ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -236,9 +270,15 @@ const Dashboard = () => {
           </div>
 
           {/* 📊 Income Chart - Enhanced Design */}
-          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+          <div className={`p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-700' 
+              : 'bg-white border-gray-100'
+          }`}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-800">Income Sources</h3>
+              <h3 className={`text-xl font-semibold ${
+                isDarkMode ? 'text-white' : 'text-gray-800'
+              }`}>Income Sources</h3>
               <div className="w-4 h-4 bg-green-500 rounded-full"></div>
             </div>
             
@@ -246,14 +286,20 @@ const Dashboard = () => {
               {loading ? (
                 <ChartSkeleton />
               ) : incomeChartData && incomeChartData.labels.length > 0 ? (
-                <Pie data={incomeChartData} options={chartOptions} />
+                <Pie data={incomeChartData} options={getChartOptions(isDarkMode)} />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <div className={`flex flex-col items-center justify-center h-full ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                    isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+                  }`}>
                     <span className="text-2xl">💰</span>
                   </div>
                   <p className="text-center">No income data available</p>
-                  <p className="text-sm text-gray-400 mt-1">Add income sources to see your earnings breakdown</p>
+                  <p className={`text-sm mt-1 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                  }`}>Add income sources to see your earnings breakdown</p>
                 </div>
               )}
             </div>
@@ -267,7 +313,9 @@ const Dashboard = () => {
                       className="w-3 h-3 rounded-full mr-2"
                       style={{ backgroundColor: incomeChartData.datasets[0].backgroundColor[index] }}
                     ></div>
-                    <span className="text-sm text-gray-600 truncate">{label}</span>
+                    <span className={`text-sm truncate ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -275,10 +323,18 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* 📊 Financial Health Score Dashboard */}
+        <div className="mt-12">
+          <FinancialHealthScore />
+        </div>
+
         {/* 📝 Keep original RecentTransactions component */}
         <RecentTransactions 
           transactions={Array.isArray(transactions) ? transactions.slice(0, 5) : []} 
         />
+        
+        {/* Quick Expense Entry Button */}
+        <QuickExpenseButton />
       </div>
     </AnimatedPage>
   );

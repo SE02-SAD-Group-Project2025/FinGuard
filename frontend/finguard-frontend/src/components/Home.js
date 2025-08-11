@@ -104,7 +104,7 @@ const Home = () => {
               🚀 New: AI-Powered Financial Assistant
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white dark:text-white leading-tight mb-6">
               FinGuard – Your <br />
               <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                 Smarter Financial Future,
@@ -112,7 +112,7 @@ const Home = () => {
               <span className="text-emerald-700 text-3xl lg:text-4xl">Powered By AI</span>
             </h1>
             
-            <p className="text-xl text-gray-700 leading-relaxed mb-8 max-w-2xl">
+            <p className="text-xl text-gray-700 dark:text-gray-200 leading-relaxed mb-8 max-w-2xl">
               Take control of your money with FinGuard—the AI-driven financial assistant that
               doesn't just track your spending, but actively helps you save, budget, and grow.
             </p>
@@ -126,14 +126,14 @@ const Home = () => {
               </Link>
               <button
                 onClick={scrollToWhyFinGuard}
-                className="bg-white text-emerald-700 font-semibold px-8 py-4 rounded-xl border-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300 shadow-sm hover:shadow-md"
+                className="bg-white dark:bg-gray-800 text-emerald-700 font-semibold px-8 py-4 rounded-xl border-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300 shadow-sm hover:shadow-md"
               >
                 Learn More
               </button>
             </div>
 
             {/* Trust indicators */}
-            <div className="flex items-center gap-6 text-sm text-gray-600">
+            <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-300">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                 <span>🔒 Bank-level security</span>
@@ -159,18 +159,18 @@ const Home = () => {
               </div>
               
               {/* Floating cards animation */}
-              <div className="absolute -top-4 -right-4 bg-white p-4 rounded-xl shadow-lg animate-bounce">
+              <div className="absolute -top-4 -right-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg animate-bounce">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 bg-green-500 rounded-full"></span>
                   <span className="text-sm font-medium">Budget on track!</span>
                 </div>
               </div>
               
-              <div className="absolute -bottom-4 -left-4 bg-white p-4 rounded-xl shadow-lg animate-pulse">
+              <div className="absolute -bottom-4 -left-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg animate-pulse">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">📈</span>
                   <div>
-                    <p className="text-xs text-gray-600">Saved this month</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">Saved this month</p>
                     <p className="font-bold text-emerald-600">LKR15,420</p>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ const Home = () => {
               <div className="text-3xl lg:text-4xl font-bold text-emerald-600 mb-2">
                 {stat.number}
               </div>
-              <div className="text-gray-600 font-medium">{stat.label}</div>
+              <div className="text-gray-600 dark:text-gray-300 font-medium">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -195,20 +195,20 @@ const Home = () => {
       {/* Why FinGuard Section with enhanced cards */}
       <div 
         id="why-finguard" 
-        className="bg-white py-20 px-6"
+        className="bg-white dark:bg-gray-800 py-20 px-6"
         data-animate
       >
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-4">
-            <span className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+            <span className="inline-flex items-center px-4 py-2 bg-blue-100 hover:bg-blue-100 dark:bg-blue-100 dark:hover:bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
               ✨ What makes us special
             </span>
           </div>
           
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
+          <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-6">
             Why FinGuard?
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-16">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-16">
             FinGuard goes beyond basic budgeting with AI that thinks ahead and adapts to your lifestyle.
           </p>
 
@@ -223,8 +223,8 @@ const Home = () => {
                   <span className="text-xs">🧠</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">AI Powered</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">AI Powered</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 Learns your spending habits to adjust budgets in real-time and provide personalized recommendations that actually work.
               </p>
             </div>
@@ -238,8 +238,8 @@ const Home = () => {
                   <span className="text-xs">⚡</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Proactive</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Proactive</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 Alerts you before you overspend with smart notifications and corrective action suggestions to keep you on track.
               </p>
             </div>
@@ -249,12 +249,12 @@ const Home = () => {
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center mx-auto shadow-xl group-hover:scale-110 transition-transform duration-300">
                   <img src={SLflag} alt="localized" className="w-12 h-12 rounded-lg" />
                 </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center">
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-400 hover:bg-blue-400 dark:bg-blue-400 dark:hover:bg-blue-400 rounded-full flex items-center justify-center">
                   <span className="text-xs">🌍</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Localized</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Localized</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 Sri Lanka-focused tools: LKR tracking, inflation forecasts, and cost-of-living templates designed for locals.
               </p>
             </div>
@@ -263,57 +263,57 @@ const Home = () => {
       </div>
 
       {/* FinGuard vs. Generic Budgeting Apps Section - REVERTED to clean simple design */}
-      <div id="comparison-table" className="bg-gray-50 py-16 px-4">
+      <div id="comparison-table" className="bg-gray-50 dark:bg-gray-900 py-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-semibold text-gray-700 text-center mb-8">
+          <h2 className="text-3xl font-semibold text-gray-700 dark:text-gray-200 text-center mb-8">
             FinGuard vs. Generic Budgeting Apps
           </h2>
-          <p className="text-center text-gray-600 mb-8">
+          <p className="text-center text-gray-600 dark:text-gray-300 mb-8">
             See why thousands choose FinGuard over traditional budgeting apps
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
+            <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="border border-gray-300 p-4">Feature</th>
-                  <th className="border border-gray-300 p-4">FinGuard</th>
-                  <th className="border border-gray-300 p-4">Other Apps</th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-4">Feature</th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-4">FinGuard</th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-4">Other Apps</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 p-4">AI Coaching</td>
-                  <td className="border border-gray-300 p-4 text-green-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4">AI Coaching</td>
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-green-600">
                     <span className="mr-2">✔</span> Dynamic, behavior-based tips
                   </td>
-                  <td className="border border-gray-300 p-4 text-red-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-red-600">
                     <span className="mr-2">✘</span> Static reports
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 p-4">Debt Tools</td>
-                  <td className="border border-gray-300 p-4 text-green-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4">Debt Tools</td>
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-green-600">
                     <span className="mr-2">✔</span> Snowball/Avalanche strategies
                   </td>
-                  <td className="border border-gray-300 p-4 text-red-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-red-600">
                     <span className="mr-2">✘</span> Basic tracking
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 p-4">Local Data</td>
-                  <td className="border border-gray-300 p-4 text-green-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4">Local Data</td>
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-green-600">
                     <span className="mr-2">✔</span> LKR inflation forecasts
                   </td>
-                  <td className="border border-gray-300 p-4 text-red-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-red-600">
                     <span className="mr-2">✘</span> Region-agnostic
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 p-4">Proactive Alerts</td>
-                  <td className="border border-gray-300 p-4 text-green-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4">Proactive Alerts</td>
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-green-600">
                     <span className="mr-2">✔</span> Predictive spending warnings
                   </td>
-                  <td className="border border-gray-300 p-4 text-red-600">
+                  <td className="border border-gray-300 dark:border-gray-600 p-4 text-red-600">
                     <span className="mr-2">✘</span> Post-spending analysis
                   </td>
                 </tr>
@@ -324,13 +324,13 @@ const Home = () => {
       </div>
 
       {/* Testimonials Section */}
-      <div className="bg-white py-20 px-6">
+      <div className="bg-white dark:bg-gray-800 py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-6">
               What Our Users Say
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-300">
               Join thousands who've transformed their financial future
             </p>
           </div>
@@ -343,7 +343,7 @@ const Home = () => {
                     <span key={i} className="text-yellow-400 text-xl">⭐</span>
                   ))}
                 </div>
-                <p className="text-gray-700 mb-6 leading-relaxed italic">
+                <p className="text-gray-700 dark:text-gray-200 mb-6 leading-relaxed italic">
                   "{testimonial.text}"
                 </p>
                 <div className="flex items-center">
@@ -351,8 +351,8 @@ const Home = () => {
                     {testimonial.name.charAt(0)}
                   </div>
                   <div className="ml-4">
-                    <h4 className="font-semibold text-gray-800">{testimonial.name}</h4>
-                    <p className="text-gray-600 text-sm">{testimonial.role}</p>
+                    <h4 className="font-semibold text-gray-800 dark:text-gray-100">{testimonial.name}</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">{testimonial.role}</p>
                   </div>
                 </div>
               </div>
@@ -365,39 +365,39 @@ const Home = () => {
       <div id="pricing-section" className="bg-gradient-to-br from-emerald-50 to-green-50 py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-6">
               Simple Plans, Big Results
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-300">
               Choose the plan that fits your financial goals
             </p>
           </div>
           
           <div className="flex justify-center gap-8 flex-wrap">
             {/* Free Plan */}
-            <div className="w-full max-w-sm p-8 border-2 border-gray-200 rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 relative">
+            <div className="w-full max-w-sm p-8 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white mb-2">Free</h3>
                 <div className="text-4xl font-bold text-emerald-600 mb-2">LKR 0</div>
-                <p className="text-gray-600">Perfect to get started</p>
+                <p className="text-gray-600 dark:text-gray-300">Perfect to get started</p>
               </div>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center">
                   <span className="mr-3 text-emerald-500">✅</span> 
-                  <span className="text-gray-700">Basic budgeting</span>
+                  <span className="text-gray-700 dark:text-gray-200">Basic budgeting</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-emerald-500">✅</span> 
-                  <span className="text-gray-700">Expense tracking</span>
+                  <span className="text-gray-700 dark:text-gray-200">Expense tracking</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-emerald-500">✅</span> 
-                  <span className="text-gray-700">Standard alerts</span>
+                  <span className="text-gray-700 dark:text-gray-200">Standard alerts</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-emerald-500">✅</span> 
-                  <span className="text-gray-700">Basic debt tracking</span>
+                  <span className="text-gray-700 dark:text-gray-200">Basic debt tracking</span>
                 </li>
               </ul>
                
@@ -419,47 +419,94 @@ const Home = () => {
               </div>
               
               <div className="text-center mb-6 pt-4">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Premium</h3>
-                <div className="text-4xl font-bold text-blue-600 mb-2">LKR 299<span className="text-lg text-gray-600">/month</span></div>
-                <p className="text-gray-600">AI-powered financial growth</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white mb-2">Premium</h3>
+                <div className="text-4xl font-bold text-blue-600 mb-2">LKR 2,999<span className="text-lg text-gray-600 dark:text-gray-300">/month</span></div>
+                <p className="text-gray-600 dark:text-gray-300">AI-powered financial growth</p>
               </div>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center">
                   <span className="mr-3 text-blue-500">✅</span> 
-                  <span className="text-gray-700 font-medium">Everything in Free</span>
+                  <span className="text-gray-700 dark:text-gray-200 font-medium">Everything in Free</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-blue-500">✅</span> 
-                  <span className="text-gray-700">AI recommendations</span>
+                  <span className="text-gray-700 dark:text-gray-200">AI recommendations</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-blue-500">✅</span> 
-                  <span className="text-gray-700">Priority support</span>
+                  <span className="text-gray-700 dark:text-gray-200">Priority support</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-blue-500">✅</span> 
-                  <span className="text-gray-700">Hyper-local insights</span>
+                  <span className="text-gray-700 dark:text-gray-200">Hyper-local insights</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-blue-500">✅</span> 
-                  <span className="text-gray-700">Debt optimization tools</span>
+                  <span className="text-gray-700 dark:text-gray-200">Debt optimization tools</span>
                 </li>
                 <li className="flex items-center">
                   <span className="mr-3 text-blue-500">✅</span> 
-                  <span className="text-gray-700">Advanced analytics</span>
+                  <span className="text-gray-700 dark:text-gray-200">Advanced analytics</span>
                 </li>
               </ul>
               
-              <button
-                onClick={() => alert('Premium trial will be available soon! Sign up for free to get notified.')}
+              <Link
+                to="/subscription/plans"
                 className="w-full inline-block bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold px-6 py-4 rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
-                Start Free Trial
-              </button>
+                View Plans & Pricing
+              </Link>
               
-              <p className="text-center text-xs text-gray-600 mt-3">
+              <p className="text-center text-xs text-gray-600 dark:text-gray-300 mt-3">
                 14-day free trial • Cancel anytime
+              </p>
+            </div>
+
+            {/* Family Plan */}
+            <div className="w-full max-w-sm p-8 border-2 border-purple-300 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white mb-2">Family</h3>
+                <div className="text-4xl font-bold text-purple-600 mb-2">LKR 4,999<span className="text-lg text-gray-600 dark:text-gray-300">/month</span></div>
+                <p className="text-gray-600 dark:text-gray-300">Complete family solution</p>
+              </div>
+              
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-center">
+                  <span className="mr-3 text-purple-500">✅</span> 
+                  <span className="text-gray-700 dark:text-gray-200 font-medium">Everything in Premium</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="mr-3 text-purple-500">✅</span> 
+                  <span className="text-gray-700 dark:text-gray-200">Up to 5 family members</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="mr-3 text-purple-500">✅</span> 
+                  <span className="text-gray-700 dark:text-gray-200">Family dashboard</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="mr-3 text-purple-500">✅</span> 
+                  <span className="text-gray-700 dark:text-gray-200">Parent controls</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="mr-3 text-purple-500">✅</span> 
+                  <span className="text-gray-700 dark:text-gray-200">Shared budgets</span>
+                </li>
+                <li className="flex items-center">
+                  <span className="mr-3 text-purple-500">✅</span> 
+                  <span className="text-gray-700 dark:text-gray-200">Combined reporting</span>
+                </li>
+              </ul>
+              
+              <Link
+                to="/subscription/plans"
+                className="w-full inline-block bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold px-6 py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              >
+                Choose Family Plan
+              </Link>
+              
+              <p className="text-center text-xs text-gray-600 dark:text-gray-300 mt-3">
+                Perfect for families of 2-5 members
               </p>
             </div>
           </div>
@@ -479,13 +526,13 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Link
               to="/register"
-              className="bg-white text-emerald-600 font-bold px-8 py-4 rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+              className="bg-white dark:bg-gray-800 text-emerald-600 font-bold px-8 py-4 rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
             >
               Start Your Free Journey →
             </Link>
             <button
               onClick={scrollToComparison}
-              className="border-2 border-white text-white font-semibold px-8 py-4 rounded-xl hover:bg-white hover:text-emerald-600 transition-all duration-300"
+              className="border-2 border-white text-white font-semibold px-8 py-4 rounded-xl hover:bg-white dark:bg-gray-800 hover:text-emerald-600 transition-all duration-300"
             >
               See Feature Comparison
             </button>

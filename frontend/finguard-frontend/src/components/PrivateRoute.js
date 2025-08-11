@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import authStorage from '../utils/authStorage';
 
 // Decode JWT token to get user information
 const getTokenPayload = () => {
-  const token = localStorage.getItem('finguard-token');
+  const token = authStorage.getToken();
   if (!token) return null;
   
   try {
@@ -36,7 +37,7 @@ const PrivateRoute = ({ children, requireAdmin = false }) => {
   const currentTime = Date.now() / 1000;
   if (tokenPayload.exp < currentTime) {
     console.log('Token expired, redirecting to login');
-    localStorage.removeItem('finguard-token');
+    authStorage.clearAuth();
     return <Navigate to="/login" replace />;
   }
   
@@ -73,7 +74,7 @@ const PrivateRoute = ({ children, requireAdmin = false }) => {
               </button>
               <button 
                 onClick={() => {
-                  localStorage.removeItem('finguard-token');
+                  authStorage.clearAuth();
                   window.location.href = '/login';
                 }}
                 className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"

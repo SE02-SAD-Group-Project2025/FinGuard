@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { buildApiUrl, getApiConfig } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
 import './auth.css';
 import finguardLogo from '../assets/finguard.jpg';
 import loginBg from '../assets/loginbg.jpg';
 import { jwtDecode } from 'jwt-decode';
 import { EyeIcon, EyeSlashIcon, EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import authStorage from '../utils/authStorage';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -91,7 +93,7 @@ function Login() {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(buildApiUrl(getApiConfig().ENDPOINTS.AUTH.LOGIN), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,15 +117,26 @@ function Login() {
       }
 
       // Normal login flow continues as before
-      // Store token
-      localStorage.setItem('finguard-token', data.token);
+      // Store token securely
+      authStorage.setToken(data.token, data.refreshToken);
+      
+      // Decode token for user information
+      const decoded = jwtDecode(data.token);
+      
+      // Store user identifier for theme persistence
+      authStorage.setUserIdentifier(decoded.email || decoded.username || decoded.userId);
       
       // Store remember me preference
       if (formData.rememberMe) {
         localStorage.setItem('finguard-remember', 'true');
       }
 
-      const decoded = jwtDecode(data.token);
+      // Trigger subscription refresh
+      window.dispatchEvent(new Event('finguard-refresh-subscription'));
+      
+      // Trigger session start
+      window.dispatchEvent(new Event('finguard-login'));
+
       const role = decoded.role;
 
       // Navigate based on role (kept exactly as before)
@@ -162,7 +175,7 @@ function Login() {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/complete-2fa-login', {
+      const response = await fetch(buildApiUrl(getApiConfig().ENDPOINTS.AUTH.COMPLETE_2FA_LOGIN), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,11 +196,22 @@ function Login() {
       // Complete login with token - same flow as normal login
       localStorage.setItem('finguard-token', data.token);
       
+      // Decode token for user information
+      const decoded = jwtDecode(data.token);
+      
+      // Store user identifier for theme persistence
+      localStorage.setItem('finguard-user', decoded.email || decoded.username || decoded.userId);
+      
       if (formData.rememberMe) {
         localStorage.setItem('finguard-remember', 'true');
       }
 
-      const decoded = jwtDecode(data.token);
+      // Trigger subscription refresh
+      window.dispatchEvent(new Event('finguard-refresh-subscription'));
+      
+      // Trigger session start
+      window.dispatchEvent(new Event('finguard-login'));
+
       const role = decoded.role;
 
       // Navigate based on role (same as normal login)

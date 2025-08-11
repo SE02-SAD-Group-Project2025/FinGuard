@@ -7,7 +7,8 @@ const {
   getBudgetSummary,
   getBudgetAlerts,
   updateBudget,
-  deleteBudget
+  deleteBudget,
+  applyAIRecommendations
 } = require('../controllers/budgetController');
 
 // 🔐 All routes are protected
@@ -17,5 +18,6 @@ router.get('/summary', authenticateToken, getBudgetSummary);
 router.get('/alerts', authenticateToken, getBudgetAlerts);
 router.put('/:id', authenticateToken, updateBudget);
 router.delete('/:id', authenticateToken, deleteBudget);
+router.post('/apply-ai-recommendations', authenticateToken, applyAIRecommendations);
 
 module.exports = router;

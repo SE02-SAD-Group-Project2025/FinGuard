@@ -4,8 +4,10 @@ import IncomeGraph from './IncomeGraph';
 import RecentIncomeSources from './RecentIncomeSources';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
+import { useTheme } from '../contexts/ThemeContext';
 
 const IncomePage = () => {
+  const { isDarkMode } = useTheme();
   const [isIncomePopupOpen, setIsIncomePopupOpen] = useState(false);
   const [incomes, setIncomes] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -299,9 +301,15 @@ const IncomePage = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Income Management</h1>
-            <p className="text-gray-600 mt-1">Track your income sources and monitor earnings</p>
-            <p className="text-sm text-gray-500">
+            <h1 className={`text-3xl font-bold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Income Management</h1>
+            <p className={`mt-1 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-600'
+            }`}>Track your income sources and monitor earnings</p>
+            <p className={`text-sm ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
               Categories: {categories.length} available • Total income entries: {incomes.length}
             </p>
           </div>
@@ -309,7 +317,7 @@ const IncomePage = () => {
             <button
               onClick={fetchAllData}
               disabled={loading}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="bg-gray-50 dark:bg-gray-9000 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               <ArrowPathIcon className="h-4 w-4" />
               {loading ? 'Refreshing...' : 'Refresh'}
@@ -325,34 +333,56 @@ const IncomePage = () => {
         </div>
 
         {/* Monthly Summary */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Summary ({currentMonth}/{currentYear})</h3>
+        <div className={`p-6 rounded-lg shadow mb-6 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>Monthly Summary ({currentMonth}/{currentYear})</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-green-50 rounded-lg">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-green-800' : 'bg-green-50'
+            }`}>
               <div className="flex items-center gap-2 mb-2">
                 <ArrowTrendingUpIcon className="h-5 w-5 text-green-600" />
-                <span className="text-green-700 font-medium">Total Income</span>
+                <span className={`font-medium ${
+                  isDarkMode ? 'text-green-300' : 'text-green-700'
+                }`}>Total Income</span>
               </div>
-              <p className="text-2xl font-bold text-green-800">
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-green-200' : 'text-green-800'
+              }`}>
                 LKR {monthlySummary.income?.toLocaleString() || '0'}
               </p>
             </div>
-            <div className="p-4 bg-red-50 rounded-lg">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-red-800' : 'bg-red-50'
+            }`}>
               <div className="flex items-center gap-2 mb-2">
                 <ArrowUpIcon className="h-5 w-5 text-red-600 rotate-180" />
-                <span className="text-red-700 font-medium">Total Expenses</span>
+                <span className={`font-medium ${
+                  isDarkMode ? 'text-red-300' : 'text-red-700'
+                }`}>Total Expenses</span>
               </div>
-              <p className="text-2xl font-bold text-red-800">
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-red-200' : 'text-red-800'
+              }`}>
                 LKR {monthlySummary.expenses?.toLocaleString() || '0'}
               </p>
             </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-blue-800' : 'bg-blue-50'
+            }`}>
               <div className="flex items-center gap-2 mb-2">
                 <CurrencyDollarIcon className="h-5 w-5 text-blue-600" />
-                <span className="text-blue-700 font-medium">Net Balance</span>
+                <span className={`font-medium ${
+                  isDarkMode ? 'text-blue-300' : 'text-blue-700'
+                }`}>Net Balance</span>
               </div>
               <p className={`text-2xl font-bold ${
-                monthlySummary.balance >= 0 ? 'text-green-800' : 'text-red-800'
+                monthlySummary.balance >= 0 ? 
+                  (isDarkMode ? 'text-green-200' : 'text-green-800') : 
+                  (isDarkMode ? 'text-red-200' : 'text-red-800')
               }`}>
                 LKR {monthlySummary.balance?.toLocaleString() || '0'}
               </p>
@@ -361,11 +391,17 @@ const IncomePage = () => {
         </div>
 
         {/* Income Categories Overview */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Income Categories Overview</h3>
+        <div className={`p-6 rounded-lg shadow mb-6 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>Income Categories Overview</h3>
           
           {categories.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className={`text-center py-8 ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
               <p>Loading categories...</p>
             </div>
           ) : (
@@ -377,26 +413,40 @@ const IncomePage = () => {
                 const totalAmount = categoryIncomes.reduce((sum, income) => sum + parseFloat(income.amount), 0);
                 
                 return (
-                  <div key={category.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div key={category.id} className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 ${
+                    isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-white'
+                  }`}>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-xl">{getIncomeIcon(category.name)}</span>
-                      <span className="font-medium text-gray-900">{category.name}</span>
+                      <span className={`font-medium ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>{category.name}</span>
                     </div>
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Total Earned:</span>
-                        <span className="font-medium text-green-600">
+                        <span className={`${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>Total Earned:</span>
+                        <span className={`font-medium ${
+                          isDarkMode ? 'text-green-400' : 'text-green-600'
+                        }`}>
                           LKR {totalAmount.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Entries:</span>
-                        <span className="font-medium text-gray-900">{categoryIncomes.length}</span>
+                        <span className={`${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>Entries:</span>
+                        <span className={`font-medium ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>{categoryIncomes.length}</span>
                       </div>
                       
                       {categoryIncomes.length > 0 && (
-                        <div className="text-xs text-gray-500">
+                        <div className={`text-xs ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
                           Avg: LKR {(totalAmount / categoryIncomes.length).toLocaleString()}
                         </div>
                       )}
@@ -414,12 +464,12 @@ const IncomePage = () => {
         {/* Add Income Modal */}
         {isIncomePopupOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Add New Income</h2>
                 <button 
                   onClick={closeIncomePopup}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-200 text-2xl"
                 >
                   ×
                 </button>
@@ -427,7 +477,7 @@ const IncomePage = () => {
               
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Category * <span className="text-xs text-gray-500">({categories.length} available)</span>
                   </label>
                   <select
@@ -435,7 +485,7 @@ const IncomePage = () => {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                   >
                     <option value="">Select Category</option>
                     {categories.map(cat => (
@@ -447,7 +497,7 @@ const IncomePage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (LKR) *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount (LKR) *</label>
                   <input
                     type="number"
                     name="amount"
@@ -457,31 +507,31 @@ const IncomePage = () => {
                     required
                     min="0"
                     step="0.01"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Date *</label>
                   <input
                     type="date"
                     name="date"
                     value={formData.date}
                     onChange={handleChange}
                     required
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
                   <textarea
                     name="description"
                     placeholder="What is this income from?"
                     value={formData.description}
                     onChange={handleChange}
                     rows="3"
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
 
@@ -489,7 +539,7 @@ const IncomePage = () => {
                   <button
                     type="button"
                     onClick={closeIncomePopup}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:bg-gray-800"
                   >
                     Cancel
                   </button>
@@ -515,30 +565,58 @@ const IncomePage = () => {
         />
 
         {/* Quick Stats */}
-        <div className="bg-white p-6 rounded-lg shadow mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Statistics</h3>
+        <div className={`p-6 rounded-lg shadow mt-6 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800' : 'bg-white'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>Quick Statistics</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="text-green-700 font-medium">Total Income Entries</p>
-              <p className="text-2xl font-bold text-green-800">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-green-800' : 'bg-green-50'
+            }`}>
+              <p className={`font-medium ${
+                isDarkMode ? 'text-green-300' : 'text-green-700'
+              }`}>Total Income Entries</p>
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-green-200' : 'text-green-800'
+              }`}>
                 {incomes.length}
               </p>
             </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <p className="text-blue-700 font-medium">Categories Used</p>
-              <p className="text-2xl font-bold text-blue-800">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-blue-800' : 'bg-blue-50'
+            }`}>
+              <p className={`font-medium ${
+                isDarkMode ? 'text-blue-300' : 'text-blue-700'
+              }`}>Categories Used</p>
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-blue-200' : 'text-blue-800'
+              }`}>
                 {new Set(incomes.map(i => i.category)).size}
               </p>
             </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <p className="text-purple-700 font-medium">This Month</p>
-              <p className="text-2xl font-bold text-purple-800">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-purple-800' : 'bg-purple-50'
+            }`}>
+              <p className={`font-medium ${
+                isDarkMode ? 'text-purple-300' : 'text-purple-700'
+              }`}>This Month</p>
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-purple-200' : 'text-purple-800'
+              }`}>
                 LKR {monthlySummary.income?.toLocaleString() || '0'}
               </p>
             </div>
-            <div className="p-4 bg-orange-50 rounded-lg">
-              <p className="text-orange-700 font-medium">Average Income</p>
-              <p className="text-2xl font-bold text-orange-800">
+            <div className={`p-4 rounded-lg transition-colors duration-300 ${
+              isDarkMode ? 'bg-orange-800' : 'bg-orange-50'
+            }`}>
+              <p className={`font-medium ${
+                isDarkMode ? 'text-orange-300' : 'text-orange-700'
+              }`}>Average Income</p>
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-orange-200' : 'text-orange-800'
+              }`}>
                 LKR {incomes.length > 0 ? 
                   (incomes.reduce((sum, inc) => sum + parseFloat(inc.amount), 0) / incomes.length).toLocaleString() : 
                   '0'

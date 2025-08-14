@@ -35,138 +35,46 @@ const FamilyMeetingScheduler = () => {
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockFamilyMembers = [
-        {
-          id: 1,
-          name: 'You (Parent)',
-          email: 'parent@family.com',
-          role: 'parent',
-          avatar: null
-        },
-        {
-          id: 2,
-          name: 'Sarah (Spouse)',
-          email: 'sarah@family.com',
-          role: 'parent',
-          avatar: null
-        },
-        {
-          id: 3,
-          name: 'Alice (Daughter)',
-          email: 'alice@family.com',
-          role: 'child',
-          avatar: null
-        },
-        {
-          id: 4,
-          name: 'Bob (Son)',
-          email: 'bob@family.com',
-          role: 'child',
-          avatar: null
-        }
-      ];
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-      const mockMeetings = [
-        {
-          id: 1,
-          title: 'Monthly Budget Review',
-          description: 'Review August spending and plan for September',
-          date: new Date(2025, 7, 15), // August 15, 2025
-          time: '19:00',
-          duration: 60,
-          type: 'budget_review',
-          meetingType: 'in_person',
-          location: 'Living Room',
-          agenda: 'Review expenses, discuss upcoming purchases, set September goals',
-          attendees: [1, 2, 3, 4],
-          reminderTime: 1440,
-          isRecurring: true,
-          recurringFrequency: 'monthly',
-          status: 'upcoming',
-          createdBy: 1,
-          responses: {
-            1: 'accepted',
-            2: 'accepted',
-            3: 'pending',
-            4: 'pending'
-          }
-        },
-        {
-          id: 2,
-          title: 'Summer Vacation Planning',
-          description: 'Discuss and plan budget for summer vacation',
-          date: new Date(2025, 7, 20), // August 20, 2025
-          time: '15:00',
-          duration: 90,
-          type: 'planning',
-          meetingType: 'video',
-          location: 'Zoom Meeting',
-          agenda: 'Destination options, budget allocation, savings plan',
-          attendees: [1, 2],
-          reminderTime: 720, // 12 hours
-          isRecurring: false,
-          recurringFrequency: '',
-          status: 'upcoming',
-          createdBy: 1,
-          responses: {
-            1: 'accepted',
-            2: 'accepted'
-          }
-        },
-        {
-          id: 3,
-          title: 'Kids Allowance Discussion',
-          description: 'Review and adjust children\'s allowances',
-          date: new Date(2025, 7, 3), // August 3, 2025
-          time: '18:30',
-          duration: 45,
-          type: 'allowance',
-          meetingType: 'in_person',
-          location: 'Kitchen',
-          agenda: 'Performance review, allowance adjustments, new responsibilities',
-          attendees: [1, 2, 3, 4],
-          reminderTime: 1440,
-          isRecurring: false,
-          recurringFrequency: '',
-          status: 'completed',
-          createdBy: 1,
-          responses: {
-            1: 'accepted',
-            2: 'accepted',
-            3: 'accepted',
-            4: 'accepted'
-          },
-          notes: 'Decided to increase Alice\'s allowance by Rs. 500. Bob needs to improve chore completion.'
-        },
-        {
-          id: 4,
-          title: 'College Fund Planning',
-          description: 'Discuss education savings strategy',
-          date: new Date(2025, 8, 1), // September 1, 2025
-          time: '20:00',
-          duration: 75,
-          type: 'savings',
-          meetingType: 'in_person',
-          location: 'Study Room',
-          agenda: 'Review current savings, investment options, timeline planning',
-          attendees: [1, 2],
-          reminderTime: 2880, // 48 hours
-          isRecurring: true,
-          recurringFrequency: 'quarterly',
-          status: 'upcoming',
-          createdBy: 2,
-          responses: {
-            1: 'pending',
-            2: 'accepted'
-          }
-        }
-      ];
-      
-      setFamilyMembers(mockFamilyMembers);
-      setMeetings(mockMeetings);
+      // Fetch real family members and meetings from API
+      const [membersResponse, meetingsResponse] = await Promise.all([
+        fetch('http://localhost:5000/api/family/members', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/family/meetings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      let realFamilyMembers = [];
+      let realMeetings = [];
+
+      if (membersResponse.ok) {
+        const membersData = await membersResponse.json();
+        realFamilyMembers = membersData.members || [];
+      }
+
+      if (meetingsResponse.ok) {
+        const meetingsData = await meetingsResponse.json();
+        realMeetings = meetingsData.meetings || [];
+      }
+
+      // If no real data available, set empty arrays (no mock data)
+      setFamilyMembers(realFamilyMembers);
+      setMeetings(realMeetings.map(meeting => ({
+        ...meeting,
+        date: new Date(meeting.date)
+      })));
+
+      // If no family members found, show empty state instead of mock data
+      if (realFamilyMembers.length === 0) {
+        console.log('No family members found - user needs to set up family first');
+      }
     } catch (error) {
       console.error('Error loading meeting data:', error);
     } finally {

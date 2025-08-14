@@ -89,12 +89,18 @@ const twoFactorRoutes = require('./routes/twoFactorRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const familyRoutes = require('./routes/familyRoutes');
 const billsRoutes = require('./routes/billsRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const goalsRoutes = require('./routes/goalsRoutes');
 const challengesRoutes = require('./routes/challengesRoutes');
 const anomalyRoutes = require('./routes/anomalyRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const adminPremiumRoutes = require('./routes/adminPremiumRoutes');
 const userRoutes = require('./routes/userRoutes');
+const customBudgetRoutes = require('./routes/customBudgetRoutes');
+const autoCategorizationRoutes = require('./routes/autoCategorizationRoutes');
+const budgetTransferRoutes = require('./routes/budgetTransferRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
@@ -108,10 +114,16 @@ app.use('/api/2fa', twoFactorRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/bills', billsRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/anomalies', anomalyRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/custom-budgets', customBudgetRoutes);
+app.use('/api/auto-categorization', autoCategorizationRoutes);
+app.use('/api/budget-transfers', budgetTransferRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/admin/premium', adminPremiumRoutes);
 // ================== ENHANCED AUTHENTICATION ENDPOINTS ==================
 
@@ -326,7 +338,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       try {
         // 📧 ACTUALLY SEND THE EMAIL
         await sendPasswordResetEmail(user.email, user.username, resetToken);
-        console.log('✅ Password reset email sent successfully to:', user.email);
+        console.log('✅ Password reset email sent to:', user.email);
       } catch (emailErr) {
         console.error('❌ Failed to send password reset email:', emailErr);
         // Don't reveal email sending failure to user for security

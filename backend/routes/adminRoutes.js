@@ -48,4 +48,14 @@ router.put('/categories/:id', adminController.updateCategory);
 // Admin: Delete category
 router.delete('/categories/:id', adminController.deleteCategory);
 
+// ================== ADMIN DASHBOARD ROUTES ==================
+// Admin: Get system statistics
+router.get('/system-stats', adminController.getSystemStats);
+
+// Admin: Get user activity analytics
+router.get('/user-activity', adminController.getUserActivity);
+
+// Admin: Get premium user overview
+router.get('/premium/overview', adminController.getPremiumOverview);
+
 module.exports = router;

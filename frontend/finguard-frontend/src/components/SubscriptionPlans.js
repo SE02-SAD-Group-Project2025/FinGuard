@@ -16,15 +16,19 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import { Crown } from 'lucide-react';
+import CardPaymentForm from './CardPaymentForm';
+import DowngradeConfirmationModal from './DowngradeConfirmationModal';
 
 const SubscriptionPlans = () => {
   const [plans, setPlans] = useState([]);
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
-  const [billingCycle, setBillingCycle] = useState('monthly');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
 
   // Get token for API calls
@@ -95,43 +99,78 @@ const SubscriptionPlans = () => {
     }
   };
 
-  // Handle plan upgrade
-  const handleUpgrade = async (planName) => {
-    if (!planName) return;
+  // Handle plan upgrade/downgrade
+  const handleUpgrade = (planName) => {
+    const plan = plans.find(p => p.name === planName);
+    if (!plan) return;
     
-    setUpgrading(true);
+    setSelectedPlan(plan);
     setError('');
     
-    try {
-      const response = await apiCall('/api/subscriptions/upgrade', {
-        method: 'POST',
-        body: JSON.stringify({
-          planName: planName,
-          billingCycle: billingCycle
-        })
-      });
-
-      if (response.success) {
-        setSuccess(response.message);
-        // Refresh current subscription data
-        await fetchData();
-        
-        // Redirect to appropriate dashboard after a delay
-        setTimeout(() => {
-          if (planName === 'premium') {
-            navigate('/premium-dashboard');
-          } else if (planName === 'family') {
-            navigate('/family-dashboard');
-          } else {
-            navigate('/dashboard');
-          }
-        }, 2000);
-      }
-    } catch (error) {
-      setError(`Failed to upgrade: ${error.message}`);
-    } finally {
-      setUpgrading(false);
+    // Check if this is a downgrade (going to free plan)
+    if (planName === 'free') {
+      setShowDowngradeModal(true);
+    } else {
+      // This is an upgrade - show payment modal
+      setShowPaymentModal(true);
     }
+  };
+
+  // Handle successful payment
+  const handlePaymentSuccess = async (paymentIntent) => {
+    setShowPaymentModal(false);
+    setSuccess(`Payment successful! Welcome to Premium!`);
+    
+    // Force immediate refresh of subscription data
+    await fetchData();
+    
+    // Also trigger global refresh for all components
+    window.dispatchEvent(new CustomEvent('finguard-refresh-subscription'));
+    
+    // Redirect to appropriate dashboard after a delay
+    setTimeout(() => {
+      if (selectedPlan.name.toLowerCase().includes('premium')) {
+        navigate('/premium-dashboard');
+      } else {
+        // For premium plan, redirect to main dashboard with premium features
+        navigate('/dashboard');
+      }
+    }, 2000);
+  };
+
+  // Handle payment error
+  const handlePaymentError = (error) => {
+    console.error('Payment failed:', error);
+    setError('Payment failed. Please try again or contact support.');
+  };
+
+  // Handle payment cancel
+  const handlePaymentCancel = () => {
+    setShowPaymentModal(false);
+    setSelectedPlan(null);
+  };
+
+  // Handle downgrade confirmation
+  const handleDowngradeConfirm = async (result) => {
+    setShowDowngradeModal(false);
+    setSuccess('Successfully downgraded to Free plan!');
+    
+    // Refresh subscription data
+    await fetchData();
+    
+    // Also trigger global refresh for all components
+    window.dispatchEvent(new CustomEvent('finguard-refresh-subscription'));
+    
+    // Redirect to regular dashboard after a delay
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 2000);
+  };
+
+  // Handle downgrade cancel
+  const handleDowngradeCancel = () => {
+    setShowDowngradeModal(false);
+    setSelectedPlan(null);
   };
 
   // Get plan features with icons
@@ -153,7 +192,6 @@ const SubscriptionPlans = () => {
     ];
 
     const familyFeatures = [
-      ...premiumFeatures,
       { icon: UsersIcon, text: 'Up to 5 family members', included: true },
       { icon: Crown, text: 'Parent controls', included: true },
       { icon: UsersIcon, text: 'Family dashboard', included: true },
@@ -168,13 +206,12 @@ const SubscriptionPlans = () => {
           { icon: XMarkIcon, text: 'Advanced analytics', included: false },
           { icon: XMarkIcon, text: 'Family features', included: false },
         ];
-      case 'premium':
+      case 'premium_monthly':
+      case 'premium_yearly':
         return [
           ...premiumFeatures,
-          { icon: XMarkIcon, text: 'Family features', included: false },
+          ...familyFeatures,
         ];
-      case 'family':
-        return familyFeatures;
       default:
         return baseFeatures;
     }
@@ -189,9 +226,9 @@ const SubscriptionPlans = () => {
     }
     
     switch (planName) {
-      case 'premium':
+      case 'premium_monthly':
         return `${baseClasses} border-purple-200 hover:border-purple-300`;
-      case 'family':
+      case 'premium_yearly':
         return `${baseClasses} border-blue-200 hover:border-blue-300 bg-gradient-to-br from-blue-50 to-purple-50`;
       default:
         return `${baseClasses} border-gray-200 hover:border-gray-300`;
@@ -208,18 +245,19 @@ const SubscriptionPlans = () => {
       );
     }
     
-    if (planName === 'family') {
+    
+    if (planName === 'premium_yearly') {
       return (
-        <span className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-          Most Popular
+        <span className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+          Best Value (17% Off)
         </span>
       );
     }
     
-    if (planName === 'premium') {
+    if (planName === 'premium_monthly') {
       return (
         <span className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-          Recommended
+          Most Popular
         </span>
       );
     }
@@ -227,9 +265,8 @@ const SubscriptionPlans = () => {
     return null;
   };
 
-  const formatPrice = (monthly, yearly) => {
-    const price = billingCycle === 'yearly' ? yearly : monthly;
-    return price === 0 ? 'Free' : `LKR ${price.toLocaleString()}`;
+  const formatPrice = (plan) => {
+    return plan.price === 0 ? 'Free' : `LKR ${plan.price.toLocaleString()}`;
   };
 
   if (loading) {
@@ -274,34 +311,6 @@ const SubscriptionPlans = () => {
           </div>
         )}
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                billingCycle === 'monthly'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle('yearly')}
-              className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                billingCycle === 'yearly'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600'
-              }`}
-            >
-              Yearly
-              <span className="ml-2 bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">
-                Save 17%
-              </span>
-            </button>
-          </div>
-        </div>
 
         {/* Current Subscription Info */}
         {currentSubscription && (
@@ -345,11 +354,11 @@ const SubscriptionPlans = () => {
                   </h3>
                   <div className="mb-4">
                     <span className="text-4xl font-bold text-gray-900">
-                      {formatPrice(plan.price_monthly, plan.price_yearly)}
+                      {formatPrice(plan)}
                     </span>
-                    {plan.price_monthly > 0 && (
+                    {plan.price > 0 && (
                       <span className="text-gray-600">
-                        /{billingCycle === 'yearly' ? 'year' : 'month'}
+                        /{plan.billing_cycle === 'yearly' ? 'year' : plan.billing_cycle}
                       </span>
                     )}
                   </div>
@@ -383,9 +392,7 @@ const SubscriptionPlans = () => {
                       onClick={() => handleUpgrade(plan.name)}
                       disabled={upgrading}
                       className={`w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center ${
-                        plan.name === 'family'
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white'
-                          : plan.name === 'premium'
+                        plan.name === 'premium'
                           ? 'bg-purple-500 hover:bg-purple-600 text-white'
                           : 'bg-gray-900 hover:bg-gray-800 text-white'
                       } ${upgrading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -428,9 +435,6 @@ const SubscriptionPlans = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Premium
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Family
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -444,9 +448,9 @@ const SubscriptionPlans = () => {
                   'Investment tracking',
                   'Smart alerts',
                   'Priority support',
-                  'Family members',
-                  'Parent controls',
-                  'Family dashboard'
+                  'Family management (up to 5 members)',
+                  'Family dashboard & controls',
+                  'Expense approval workflow'
                 ].map((feature, index) => (
                   <tr key={index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -454,13 +458,6 @@ const SubscriptionPlans = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {index < 3 ? (
-                        <CheckIcon className="w-5 h-5 text-green-500 mx-auto" />
-                      ) : (
-                        <XMarkIcon className="w-5 h-5 text-gray-400 mx-auto" />
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {index < 9 ? (
                         <CheckIcon className="w-5 h-5 text-green-500 mx-auto" />
                       ) : (
                         <XMarkIcon className="w-5 h-5 text-gray-400 mx-auto" />
@@ -495,11 +492,11 @@ const SubscriptionPlans = () => {
             
             <div className="border border-gray-200 rounded-lg p-6">
               <h3 className="font-medium text-gray-900 mb-2">
-                How does the family plan work?
+                How do family features work in Premium?
               </h3>
               <p className="text-gray-600">
-                Family plans support up to 5 members with role-based access. Parents can set budgets 
-                and view all family finances, while children can only add expenses within their allocated budgets.
+                Premium users get full family management features for up to 5 family members. Parents can set budgets, 
+                view all family finances, and approve expenses, while family members can track expenses within their allocated budgets.
               </p>
             </div>
             
@@ -514,6 +511,25 @@ const SubscriptionPlans = () => {
             </div>
           </div>
         </div>
+
+        {/* Payment Modal */}
+        {showPaymentModal && selectedPlan && (
+          <CardPaymentForm
+            plan={selectedPlan}
+            onSuccess={handlePaymentSuccess}
+            onError={handlePaymentError}
+            onCancel={handlePaymentCancel}
+          />
+        )}
+
+        {/* Downgrade Confirmation Modal */}
+        {showDowngradeModal && selectedPlan && (
+          <DowngradeConfirmationModal
+            currentPlan={currentSubscription}
+            onConfirm={handleDowngradeConfirm}
+            onCancel={handleDowngradeCancel}
+          />
+        )}
       </div>
     </AnimatedPage>
   );

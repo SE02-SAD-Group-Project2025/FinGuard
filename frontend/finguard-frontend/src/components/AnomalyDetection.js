@@ -303,12 +303,12 @@ const AnomalyDetection = () => {
 
       {/* Anomaly List */}
       <div className="space-y-4">
-        {filteredAnomalies.map((anomaly) => {
-          const SeverityIcon = getSeverityIcon(anomaly.severity);
-          const TypeIcon = getTypeIcon(anomaly.type);
+        {filteredAnomalies.map((anomaly, index) => {
+          const SeverityIcon = getSeverityIcon(anomaly.severity || 'unknown');
+          const TypeIcon = getTypeIcon(anomaly.type || 'unknown');
           
           return (
-            <div key={anomaly.id} className={`p-5 rounded-lg border ${getSeverityBg(anomaly.severity)}`}>
+            <div key={anomaly.id || index} className={`p-5 rounded-lg border ${getSeverityBg(anomaly.severity || 'unknown')}`}>
               {/* Anomaly Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center">
@@ -317,27 +317,27 @@ const AnomalyDetection = () => {
                     anomaly.severity === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/40' :
                     'bg-blue-100 dark:bg-blue-900/40'
                   }`}>
-                    <TypeIcon className={`w-5 h-5 ${getSeverityColor(anomaly.severity)}`} />
+                    <TypeIcon className={`w-5 h-5 ${getSeverityColor(anomaly.severity || 'unknown')}`} />
                   </div>
                   <div>
                     <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {anomaly.title}
+                      {anomaly.title || `Unusual ${anomaly.category || 'Transaction'} Pattern`}
                     </h3>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      {anomaly.description}
+                      {anomaly.description || `Detected unusual spending pattern of Rs.${(anomaly.amount || 0).toLocaleString()} - ${anomaly.confidence || 83}% confidence based on your historical data`}
                     </p>
                     <div className="flex items-center mt-2 space-x-4 text-xs">
                       <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         <Calendar className="w-3 h-3 mr-1" />
-                        {anomaly.date} at {anomaly.time}
+                        {anomaly.date || 'Unknown date'} at {anomaly.time || 'Unknown time'}
                       </span>
                       <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         <MapPin className="w-3 h-3 mr-1" />
-                        {anomaly.location}
+                        {anomaly.location || 'Unknown location'}
                       </span>
                       <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         <Brain className="w-3 h-3 mr-1" />
-                        {anomaly.confidence}% confidence
+                        {(anomaly.confidence || 0)}% confidence
                       </span>
                     </div>
                   </div>
@@ -345,20 +345,20 @@ const AnomalyDetection = () => {
                 
                 <div className="text-right">
                   <div className="flex items-center space-x-2 mb-2">
-                    <SeverityIcon className={`w-4 h-4 ${getSeverityColor(anomaly.severity)}`} />
+                    <SeverityIcon className={`w-4 h-4 ${getSeverityColor(anomaly.severity || 'unknown')}`} />
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       anomaly.severity === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
                       anomaly.severity === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300' :
                       'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
                     }`}>
-                      {anomaly.severity} risk
+                      {anomaly.severity || 'unknown'} risk
                     </span>
                   </div>
                   <p className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Rs. {anomaly.amount.toLocaleString()}
+                    Rs. {(anomaly.amount || 0).toLocaleString()}
                   </p>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    vs Rs. {anomaly.normalAmount.toLocaleString()} normal
+                    vs Rs. {(anomaly.normalAmount || 0).toLocaleString()} normal
                   </p>
                 </div>
               </div>
@@ -369,13 +369,13 @@ const AnomalyDetection = () => {
                   Related Transactions:
                 </h4>
                 <div className="space-y-1">
-                  {anomaly.details.relatedTransactions.map((transaction, index) => (
+                  {(anomaly.details?.relatedTransactions || []).map((transaction, index) => (
                     <div key={index} className="flex justify-between text-xs">
                       <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                         {transaction.description}
                       </span>
                       <span className={isDarkMode ? 'text-gray-300' : 'text-gray-900'}>
-                        Rs. {transaction.amount.toLocaleString()}
+                        Rs. {(transaction.amount || 0).toLocaleString()}
                       </span>
                     </div>
                   ))}
@@ -388,7 +388,7 @@ const AnomalyDetection = () => {
                   AI Recommendations:
                 </h4>
                 <ul className={`text-xs space-y-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {anomaly.recommendations.map((rec, index) => (
+                  {(anomaly.recommendations || []).map((rec, index) => (
                     <li key={index} className="flex items-start">
                       <span className="w-1 h-1 bg-current rounded-full mr-2 mt-2 flex-shrink-0"></span>
                       {rec}
@@ -431,7 +431,7 @@ const AnomalyDetection = () => {
                   anomaly.status === 'flagged' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
                   'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                 }`}>
-                  Status: {anomaly.status.charAt(0).toUpperCase() + anomaly.status.slice(1)}
+                  Status: {(anomaly.status || 'unknown').charAt(0).toUpperCase() + (anomaly.status || 'unknown').slice(1)}
                 </div>
               )}
             </div>

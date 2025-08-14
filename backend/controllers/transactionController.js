@@ -1,5 +1,7 @@
 const db = require('../db');
 const { sendBudgetAlertEmail } = require('../utils/emailService');
+const { createBudgetOverflowNotification } = require('./notificationController');
+const { ensureCurrentMonthBudgets } = require('../services/budgetService');
 
 const addTransaction = async (req, res) => {
   const userId = req.user.userId;
@@ -22,6 +24,7 @@ const addTransaction = async (req, res) => {
 
     const newTransaction = insertResult.rows[0];
     console.log('✅ Transaction saved:', newTransaction);
+    console.log('🚀 STARTING BUDGET OVERFLOW CHECK...');
 
     // ✅ ENHANCED: Log transaction addition with details
     try {
@@ -43,8 +46,15 @@ const addTransaction = async (req, res) => {
       console.error('❌ Failed to log transaction addition:', logErr);
     }
 
+    console.log(`🔍 ABOUT TO CHECK IF EXPENSE`);
+    
     // Only proceed for expenses
     if (type === 'expense') {
+      console.log(`🔍 YES THIS IS AN EXPENSE - ENSURING CURRENT MONTH BUDGETS EXIST`);
+      
+      // Ensure user has budgets for current month before overflow check
+      await ensureCurrentMonthBudgets(userId);
+      console.log(`🔍 YES THIS IS AN EXPENSE - PROCEEDING WITH BUDGET CHECK`);
       const month = new Date(date).getMonth() + 1;
       const year = new Date(date).getFullYear();
 
@@ -55,7 +65,11 @@ const addTransaction = async (req, res) => {
       );
       const budget = budgetRes.rows[0];
 
+      console.log(`📊 Budget found for ${category}:`, budget ? 'YES' : 'NO');
+      
       if (budget) {
+        console.log(`💰 Budget details: limit=${budget.limit_amount}, alert_triggered=${budget.alert_triggered}`);
+        
         // Calculate total spent in this category for the month
         const spentRes = await db.query(
           `SELECT SUM(amount) AS total_spent
@@ -69,7 +83,13 @@ const addTransaction = async (req, res) => {
 
         console.log(`🧮 Total spent: ${totalSpent}, Limit: ${limit}`);
 
-        if (totalSpent > limit && !budget.alert_triggered) {
+        console.log(`🔍 Checking overflow: totalSpent=${totalSpent}, limit=${limit}, condition=${totalSpent > limit}`);
+        
+        // Simple overflow check - always return overflow data if exceeded
+        if (totalSpent > limit) {
+          console.log(`🚨 SIMPLE OVERFLOW DETECTED!`);
+          const overflowAmount = totalSpent - limit;
+          
           // Get user's email and username
           const userRes = await db.query(
             `SELECT email, username FROM users WHERE id = $1`,
@@ -77,21 +97,82 @@ const addTransaction = async (req, res) => {
           );
           const user = userRes.rows[0];
 
-          console.log('📧 Sending email to:', user.email);
+          console.log(`🚨 BUDGET OVERFLOW DETECTED: ${category} exceeded by ${overflowAmount}`);
+          
+          // Create budget overflow record
+          const overflowResult = await db.query(
+            `INSERT INTO budget_overflows (user_id, transaction_id, category, budget_limit, actual_spent, overflow_amount, is_resolved)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [userId, newTransaction.id, category, limit, totalSpent, overflowAmount, false]
+          );
+          const overflow = overflowResult.rows[0];
 
-          if (user?.email) {
-            await sendBudgetAlertEmail(user.email, user.username, category, totalSpent, limit);
-            console.log('✅ Email sent successfully!');
+          // 📱 Create FinGuard notification for budget overflow
+          try {
+            await createBudgetOverflowNotification(
+              userId, 
+              category, 
+              totalSpent, 
+              limit, 
+              overflowAmount
+            );
+            console.log('📱 Budget overflow notification created in FinGuard notifications');
+          } catch (notifError) {
+            console.error('❌ Failed to create budget overflow notification:', notifError);
+            // Don't fail the transaction if notification fails
           }
 
+          // Create system alert
+          await db.query(
+            `INSERT INTO budget_alerts (user_id, category, alert_type, message, amount, email_sent)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [userId, category, 'exceeded', `Budget exceeded in ${category} by LKR ${overflowAmount.toFixed(2)}`, overflowAmount, false]
+          );
+
+          // Send email alert if not already triggered
+          if (!budget.alert_triggered && user?.email) {
+            console.log('🔍 About to send budget alert email...');
+            await sendBudgetAlertEmail(user.email, user.username, category, totalSpent, limit);
+            console.log('✅ Email sent successfully!');
+            
+            console.log('🔍 About to update email sent status...');
+            // Update email sent status for the most recent alert
+            await db.query(
+              `UPDATE budget_alerts SET email_sent = TRUE 
+               WHERE user_id = $1 AND category = $2 AND alert_type = 'exceeded' 
+               AND alert_date = (
+                 SELECT MAX(alert_date) FROM budget_alerts 
+                 WHERE user_id = $1 AND category = $2 AND alert_type = 'exceeded'
+               )`,
+              [userId, category]
+            );
+            console.log('✅ Email status updated successfully!');
+          }
+
+          console.log('🔍 About to update budget alert_triggered status...');
           // Update alert status
           await db.query(
             `UPDATE budgets SET alert_triggered = TRUE WHERE id = $1`,
             [budget.id]
           );
-
-          // ✅ ENHANCED: Log budget alert triggered
+          console.log('✅ Budget alert_triggered updated successfully!');
+          
+          console.log(`🎯 RETURNING OVERFLOW DATA TO FRONTEND`);
+          
+          // Update the transaction to mark it as overflow BEFORE returning
+          await db.query(
+            `UPDATE transactions 
+             SET is_overflow = TRUE, 
+                 overflow_amount = $1
+             WHERE id = $2`,
+            [overflowAmount, newTransaction.id]
+          );
+          
+          console.log(`✅ Transaction ${newTransaction.id} marked as overflow with amount ${overflowAmount}`);
+          
+          // ✅ ENHANCED: Log budget alert triggered before returning
           try {
+            console.log('🔍 About to create budget alert log...');
             await db.query(
               'INSERT INTO logs (user_id, activity, details) VALUES ($1, $2, $3)',
               [userId, 'Budget alert triggered', JSON.stringify({
@@ -106,10 +187,29 @@ const addTransaction = async (req, res) => {
                 year: year
               })]
             );
-            console.log('✅ Budget alert log created');
+            console.log('✅ Budget alert log created successfully');
           } catch (logErr) {
             console.error('❌ Failed to log budget alert:', logErr);
+            console.error('❌ Log error details:', logErr.message);
           }
+          
+          // Return overflow information for frontend handling
+          return res.status(201).json({ 
+            message: 'Transaction added successfully', 
+            transaction: {
+              ...newTransaction,
+              is_overflow: true,
+              overflow_amount: overflowAmount
+            },
+            budgetOverflow: {
+              overflowId: overflow.id,
+              category: category,
+              amount: overflowAmount,
+              totalSpent: totalSpent,
+              budgetLimit: limit,
+              requiresTransfer: true
+            }
+          });
         }
 
         // Reset alert if under limit again
@@ -149,13 +249,38 @@ const addTransaction = async (req, res) => {
 
 const getTransactions = async (req, res) => {
   const userId = req.user.userId;
+  const { month, year, type } = req.query;
 
   try {
-    const result = await db.query(
-      `SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC`,
-      [userId]
-    );
-    res.json(result.rows);
+    let query = `SELECT * FROM transactions WHERE user_id = $1`;
+    let params = [userId];
+    let paramIndex = 2;
+
+    // Add month/year filtering if provided
+    if (month && year) {
+      query += ` AND EXTRACT(MONTH FROM date) = $${paramIndex} AND EXTRACT(YEAR FROM date) = $${paramIndex + 1}`;
+      params.push(parseInt(month), parseInt(year));
+      paramIndex += 2;
+    }
+
+    // Add type filtering if provided (income/expense)
+    if (type) {
+      query += ` AND type = $${paramIndex}`;
+      params.push(type);
+    }
+
+    query += ` ORDER BY date DESC`;
+
+    const result = await db.query(query, params);
+    
+    res.json({
+      transactions: result.rows,
+      month: month ? parseInt(month) : null,
+      year: year ? parseInt(year) : null,
+      type: type || 'all',
+      currentMonth: new Date().getMonth() + 1,
+      currentYear: new Date().getFullYear()
+    });
   } catch (err) {
     console.error('🔴 GET TRANSACTIONS ERROR:', err.message);
     res.status(500).json({ error: 'Failed to fetch transactions' });

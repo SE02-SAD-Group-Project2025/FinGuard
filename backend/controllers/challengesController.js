@@ -65,14 +65,14 @@ const getAvailableChallenges = async (req, res) => {
       {
         id: 'template_1',
         title: 'Coffee Budget Master',
-        description: 'Limit your coffee spending to $50 this month',
+        description: 'Limit your coffee spending to Rs. 8,000 this month',
         type: 'category_limit',
-        target: 50,
+        target: 8000,
         duration: 30,
         category: 'Food & Dining',
         difficulty: 'medium',
         points: 100,
-        estimatedSavings: 30,
+        estimatedSavings: 4800,
         reward: 'Coffee Connoisseur Badge'
       },
       {
@@ -85,33 +85,33 @@ const getAvailableChallenges = async (req, res) => {
         category: 'all',
         difficulty: 'hard',
         points: 200,
-        estimatedSavings: 100,
+        estimatedSavings: 16000,
         reward: 'Savings Warrior Badge'
       },
       {
         id: 'template_3',
         title: 'Transportation Saver',
-        description: 'Keep transportation costs under $80 this month',
+        description: 'Keep transportation costs under Rs. 12,800 this month',
         type: 'category_limit',
-        target: 80,
+        target: 12800,
         duration: 30,
         category: 'Transportation',
         difficulty: 'medium',
         points: 100,
-        estimatedSavings: 40,
+        estimatedSavings: 6400,
         reward: 'Green Commuter Badge'
       },
       {
         id: 'template_4',
         title: 'Entertainment Budget Pro',
-        description: 'Stay under $75 for entertainment this month',
+        description: 'Stay under Rs. 12,000 for entertainment this month',
         type: 'category_limit',
-        target: 75,
+        target: 12000,
         duration: 30,
         category: 'Entertainment',
         difficulty: 'medium',
         points: 100,
-        estimatedSavings: 25,
+        estimatedSavings: 4000,
         reward: 'Entertainment Master Badge'
       },
       {
@@ -124,7 +124,7 @@ const getAvailableChallenges = async (req, res) => {
         category: 'Shopping',
         difficulty: 'hard',
         points: 150,
-        estimatedSavings: 75,
+        estimatedSavings: 12000,
         reward: 'Minimalist Badge'
       }
     ];
@@ -318,9 +318,9 @@ const startChallenge = async (req, res) => {
         {
           id: 'template_1',
           title: 'Coffee Budget Master',
-          description: 'Limit your coffee spending to $50 this month',
+          description: 'Limit your coffee spending to Rs. 8,000 this month',
           type: 'category_limit',
-          target_value: 50,
+          target_value: 8000,
           duration: 30,
           category: 'Food & Dining',
           difficulty: 'medium',

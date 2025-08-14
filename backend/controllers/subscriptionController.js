@@ -1,21 +1,51 @@
 // controllers/subscriptionController.js
 const pool = require('../db');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // Get all available subscription plans
 exports.getSubscriptionPlans = async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT id, name, display_name, description, price_monthly, price_yearly, 
-             max_family_members, features, is_active
-      FROM subscription_plans 
-      WHERE is_active = true 
-      ORDER BY price_monthly ASC
-    `);
+    // Return hardcoded plans (3 separate plans)
+    const transformedPlans = [
+      {
+        id: 1,
+        name: 'free',
+        display_name: 'Regular User',
+        description: 'Basic financial tracking features',
+        price: 0,
+        billing_cycle: 'lifetime',
+        max_family_members: 1,
+        features: ["Basic Transaction Tracking", "Simple Budget Management", "Basic Reports", "Email Support"],
+        is_active: true
+      },
+      {
+        id: 2, 
+        name: 'premium_monthly',
+        display_name: 'Premium Monthly',
+        description: 'All premium features including family management',
+        price: 999,
+        billing_cycle: 'monthly',
+        max_family_members: 5,
+        features: ["Advanced Analytics", "Budget Transfers", "Export Reports", "Priority Support", "AI Insights", "Custom Categories", "Advanced Reports", "Family Management (Up to 5 members)"],
+        is_active: true
+      },
+      {
+        id: 3, 
+        name: 'premium_yearly',
+        display_name: 'Premium Yearly',
+        description: 'All premium features including family management (17% savings!)',
+        price: 10000,
+        billing_cycle: 'yearly',
+        max_family_members: 5,
+        features: ["Advanced Analytics", "Budget Transfers", "Export Reports", "Priority Support", "AI Insights", "Custom Categories", "Advanced Reports", "Family Management (Up to 5 members)"],
+        is_active: true
+      }
+    ];
 
     res.json({
       success: true,
-      plans: result.rows
+      plans: transformedPlans
     });
   } catch (error) {
     console.error('Error fetching subscription plans:', error);
@@ -28,74 +58,55 @@ exports.getUserSubscription = async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    const result = await pool.query(`
-      SELECT 
-        us.id as subscription_id,
-        us.status,
-        us.billing_cycle,
-        us.current_period_start,
-        us.current_period_end,
-        us.auto_renew,
-        sp.name as plan_name,
-        sp.display_name,
-        sp.description,
-        sp.price_monthly,
-        sp.price_yearly,
-        sp.max_family_members,
-        sp.features
-      FROM user_subscriptions us
-      JOIN subscription_plans sp ON us.plan_id = sp.id
-      JOIN users u ON us.user_id = u.id
-      WHERE us.user_id = $1 AND us.status = 'active'
-      ORDER BY us.created_at DESC
-      LIMIT 1
-    `, [userId]);
+    // Check if user is premium
+    const userResult = await pool.query('SELECT is_premium FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
 
-    if (result.rows.length === 0) {
-      return res.json({ 
+    if (!user || !user.is_premium) {
+      // User is on free plan
+      return res.json({
         success: true,
-        subscription: null,
-        message: 'No active subscription found - user is on free plan'
+        subscription: {
+          plan_name: 'free',
+          display_name: 'Regular User',
+          status: 'active',
+          billing: 'LKR 0.00/free',
+          billing_cycle: 'lifetime',
+          current_period_start: new Date(),
+          current_period_end: new Date('2099-12-31'), // Far future for free plan
+          auto_renew: false,
+          features: ['Basic Transaction Tracking', 'Simple Budget Management', 'Basic Reports', 'Email Support']
+        }
       });
     }
 
-    const subscription = result.rows[0];
-
-    // Check if subscription is expired
-    const now = new Date();
-    const isExpired = new Date(subscription.current_period_end) < now;
-    
-    if (isExpired) {
-      // Update subscription status to expired
-      await pool.query(`
-        UPDATE user_subscriptions 
-        SET status = 'expired', updated_at = CURRENT_TIMESTAMP 
-        WHERE user_id = $1 AND status = 'active'
-      `, [userId]);
-      
-      subscription.status = 'expired';
-    }
-
-    // Get family members if family plan
-    let familyMembers = [];
-    if (subscription.plan_name === 'family') {
-      const familyResult = await pool.query(`
-        SELECT id, name, email, role, monthly_budget, status, joined_at
-        FROM family_members 
-        WHERE family_owner_id = $1 
-        ORDER BY role DESC, name ASC
-      `, [userId]);
-      familyMembers = familyResult.rows;
-    }
+    // User is premium - create mock premium subscription data
+    const premiumSubscription = {
+      plan_name: 'premium',
+      display_name: 'Premium User', 
+      status: 'active',
+      billing: 'LKR 999.00/monthly', // Default to monthly, could be yearly
+      billing_cycle: 'monthly',
+      current_period_start: new Date(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      auto_renew: true,
+      features: [
+        'Advanced Analytics',
+        'Budget Transfers', 
+        'Export Reports',
+        'Priority Support',
+        'AI Insights',
+        'Custom Categories',
+        'Advanced Reports',
+        'Family Management (Up to 5 members)'
+      ]
+    };
 
     res.json({
       success: true,
-      subscription: {
-        ...subscription,
-        is_expired: isExpired,
-        family_members: familyMembers
-      }
+      subscription: premiumSubscription
     });
+
   } catch (error) {
     console.error('Error fetching user subscription:', error);
     res.status(500).json({ error: 'Failed to fetch subscription details' });
@@ -107,7 +118,7 @@ exports.upgradeSubscription = async (req, res) => {
   const userId = req.user.userId;
   const { planName, billingCycle = 'monthly' } = req.body;
 
-  if (!planName || !['free', 'premium', 'family'].includes(planName)) {
+  if (!planName || !['free', 'premium_monthly', 'premium_yearly'].includes(planName)) {
     return res.status(400).json({ error: 'Invalid plan name' });
   }
 
@@ -116,18 +127,38 @@ exports.upgradeSubscription = async (req, res) => {
   }
 
   try {
-    // Get the new plan details
-    const planResult = await pool.query(`
-      SELECT id, name, display_name, price_monthly, price_yearly, max_family_members
-      FROM subscription_plans 
-      WHERE name = $1 AND is_active = true
-    `, [planName]);
-
-    if (planResult.rows.length === 0) {
+    // Get the new plan details (use hardcoded plans)
+    let newPlan;
+    if (planName === 'free') {
+      newPlan = {
+        id: 1,
+        name: 'free',
+        display_name: 'Regular User',
+        price: 0,
+        billing_cycle: 'lifetime',
+        max_family_members: 1
+      };
+    } else if (planName === 'premium_monthly') {
+      newPlan = {
+        id: 2,
+        name: 'premium_monthly',
+        display_name: 'Premium Monthly',
+        price: 999,
+        billing_cycle: 'monthly',
+        max_family_members: 5
+      };
+    } else if (planName === 'premium_yearly') {
+      newPlan = {
+        id: 3,
+        name: 'premium_yearly',
+        display_name: 'Premium Yearly',
+        price: 10000,
+        billing_cycle: 'yearly',
+        max_family_members: 5
+      };
+    } else {
       return res.status(404).json({ error: 'Plan not found' });
     }
-
-    const newPlan = planResult.rows[0];
 
     // Get current subscription
     const currentSubResult = await pool.query(`
@@ -168,17 +199,29 @@ exports.upgradeSubscription = async (req, res) => {
         VALUES ($1, $2, 'active', $3, $4, $5, true)
       `, [userId, newPlan.id, billingCycle, periodStart, periodEnd]);
 
-      // Update user role based on plan (only update role, not non-existent columns)
+      // Update user role based on plan - preserve Admin role
+      const currentUserResult = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+      const currentRole = currentUserResult.rows[0]?.role;
+      
       let newRole = 'User';
-      if (planName === 'premium' || planName === 'family') {
+      const isPremium = planName === 'premium_monthly' || planName === 'premium_yearly';
+      
+      // Preserve Admin role - Admins keep Admin role regardless of subscription
+      if (currentRole === 'Admin') {
+        newRole = 'Admin';
+      } else if (isPremium) {
         newRole = 'Premium User';
+      } else {
+        newRole = 'User'; // Free plan
       }
 
+      console.log(`🔄 Updating user role: ${currentRole} -> ${newRole}, is_premium: ${isPremium}`);
+      
       await pool.query(`
         UPDATE users 
-        SET role = $1
-        WHERE id = $2
-      `, [newRole, userId]);
+        SET role = $1, is_premium = $2
+        WHERE id = $3
+      `, [newRole, isPremium, userId]);
 
       // Log subscription history
       await pool.query(`
@@ -210,7 +253,7 @@ exports.upgradeSubscription = async (req, res) => {
             old_plan: currentPlan,
             new_plan: planName,
             billing_cycle: billingCycle,
-            amount: billingCycle === 'yearly' ? newPlan.price_yearly : newPlan.price_monthly,
+            amount: newPlan.price,
             ip_address: req.ip || req.connection?.remoteAddress,
             user_agent: req.get('User-Agent')
           })]
@@ -218,6 +261,21 @@ exports.upgradeSubscription = async (req, res) => {
       } catch (logErr) {
         console.error('Failed to log subscription upgrade:', logErr);
       }
+
+      // Generate new JWT token with updated role
+      const userResult = await pool.query('SELECT id, username, email, role FROM users WHERE id = $1', [userId]);
+      const updatedUser = userResult.rows[0];
+      
+      const newToken = jwt.sign(
+        { 
+          userId: updatedUser.id, 
+          username: updatedUser.username, 
+          email: updatedUser.email, 
+          role: updatedUser.role 
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
 
       res.json({
         success: true,
@@ -227,8 +285,9 @@ exports.upgradeSubscription = async (req, res) => {
           display_name: newPlan.display_name,
           billing_cycle: billingCycle,
           current_period_end: periodEnd,
-          price: billingCycle === 'yearly' ? newPlan.price_yearly : newPlan.price_monthly
-        }
+          price: newPlan.price
+        },
+        newToken: newToken // Send new token to frontend
       });
 
     } catch (error) {
@@ -574,3 +633,6 @@ exports.updateFamilyMemberBudget = async (req, res) => {
     res.status(500).json({ error: 'Failed to update budget' });
   }
 };
+
+// Note: All exports are using individual exports.functionName format above
+// No need for module.exports = {} block at the end

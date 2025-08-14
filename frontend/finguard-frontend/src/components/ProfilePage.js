@@ -406,8 +406,12 @@ const ProfilePage = () => {
 
         <div className="max-w-5xl mx-auto p-6 space-y-6">
           {/* Profile Info */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-700 dark:text-white mb-4">Profile Information</h2>
+          <div className={`p-6 rounded-lg shadow border transition-colors ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-700' 
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Profile Information</h2>
             
             {loading && (
               <div className="text-center py-4">
@@ -497,39 +501,51 @@ const ProfilePage = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+                    <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Username</label>
                     <input 
                       type="text" 
                       placeholder="Username" 
                       value={userProfile.username}
                       onChange={(e) => handleInputChange('username', e.target.value)}
                       disabled={!isEditing}
-                      className={`w-full border rounded px-4 py-2 ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500'} border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white`}
+                      className={`w-full border rounded px-4 py-2 transition-colors ${
+                        !isEditing 
+                          ? (isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900')
+                          : (isDarkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500')
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                    <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email</label>
                     <input 
                       type="email" 
                       placeholder="Email" 
                       value={userProfile.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       disabled={!isEditing}
-                      className={`w-full border rounded px-4 py-2 ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500'} border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white`}
+                      className={`w-full border rounded px-4 py-2 transition-colors ${
+                        !isEditing 
+                          ? (isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900')
+                          : (isDarkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500')
+                      }`}
                     />
                   </div>
 
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                      <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Phone</label>
                       <input 
                         type="text" 
                         placeholder="Phone Number" 
                         value={userProfile.phone}
                         onChange={(e) => handleInputChange('phone', e.target.value)}
                         disabled={!isEditing}
-                        className={`w-full border rounded px-4 py-2 ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500'} border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white`}
+                        className={`w-full border rounded px-4 py-2 transition-colors ${
+                        !isEditing 
+                          ? (isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900')
+                          : (isDarkMode ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500')
+                      }`}
                       />
                     </div>
                     {!isEditing && (
@@ -578,18 +594,22 @@ const ProfilePage = () => {
           </div>
 
           {/* Theme Settings */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-700 dark:text-white mb-4">Appearance</h2>
+          <div className={`p-6 rounded-lg shadow border transition-colors ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-700' 
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Appearance</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Theme</p>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Choose your preferred theme. Dark mode reduces eye strain in low-light conditions.
                   </p>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {isDarkMode ? 'Dark' : 'Light'}
                   </span>
                   <ThemeToggle variant="switch" size="lg" />
@@ -602,9 +622,13 @@ const ProfilePage = () => {
           <SessionStatus />
 
           {/* Security */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-700 dark:text-white mb-4">Security & Privacy</h2>
-            <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
+          <div className={`p-6 rounded-lg shadow border transition-colors ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-700' 
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Security & Privacy</h2>
+            <div className={`space-y-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               <div className="flex items-center justify-between">
                 <p>Change Password</p>
                 <button 
@@ -675,9 +699,13 @@ const ProfilePage = () => {
         {/* Change Password Modal */}
         {showPasswordModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-[400px] max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+            <div className={`p-6 rounded-lg w-[400px] max-h-[90vh] overflow-y-auto border transition-colors ${
+              isDarkMode 
+                ? 'bg-gray-800 border-gray-600' 
+                : 'bg-white border-gray-200'
+            }`}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Change Password</h2>
+                <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Change Password</h2>
                 <button 
                   onClick={() => {
                     setShowPasswordModal(false);
@@ -692,34 +720,46 @@ const ProfilePage = () => {
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Current Password</label>
                   <input
                     type="password"
                     value={passwordData.currentPassword}
                     onChange={(e) => handlePasswordInputChange('currentPassword', e.target.value)}
-                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border p-3 rounded-lg transition-colors focus:ring-green-500 focus:border-green-500 ${
+                      isDarkMode 
+                        ? 'border-gray-600 bg-gray-700 text-white' 
+                        : 'border-gray-300 bg-white text-gray-900'
+                    }`}
                     placeholder="Enter current password"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password</label>
                   <input
                     type="password"
                     value={passwordData.newPassword}
                     onChange={(e) => handlePasswordInputChange('newPassword', e.target.value)}
-                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border p-3 rounded-lg transition-colors focus:ring-green-500 focus:border-green-500 ${
+                      isDarkMode 
+                        ? 'border-gray-600 bg-gray-700 text-white' 
+                        : 'border-gray-300 bg-white text-gray-900'
+                    }`}
                     placeholder="Enter new password"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm New Password</label>
                   <input
                     type="password"
                     value={passwordData.confirmPassword}
                     onChange={(e) => handlePasswordInputChange('confirmPassword', e.target.value)}
-                    className="w-full border border-gray-300 dark:border-gray-600 p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-green-500 focus:border-green-500"
+                    className={`w-full border p-3 rounded-lg transition-colors focus:ring-green-500 focus:border-green-500 ${
+                      isDarkMode 
+                        ? 'border-gray-600 bg-gray-700 text-white' 
+                        : 'border-gray-300 bg-white text-gray-900'
+                    }`}
                     placeholder="Confirm new password"
                   />
                 </div>

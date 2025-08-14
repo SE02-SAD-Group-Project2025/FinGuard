@@ -60,7 +60,8 @@ const PremiumAnalyticsDashboard = () => {
         averageTransaction: transactionsData.length > 0 ? 
           transactionsData.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) / transactionsData.length : 0,
         topCategory: 'General', // Calculate from transactions
-        conversionRate: 85, // Mock conversion rate
+        conversionRate: transactionsData.length > 0 ? 
+          Math.round((summaryData.income > 0 ? (summaryData.balance / summaryData.income) : 0) * 100) : 0, // Real conversion rate based on savings rate
         customerLTV: 12000, // Customer lifetime value
         monthlyRecurring: summaryData.income * 0.3, // Estimate
         budget: {

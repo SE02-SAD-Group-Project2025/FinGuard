@@ -110,19 +110,6 @@ const PremiumDashboard = () => {
       )
     },
     {
-      id: 'family',
-      name: 'Family',
-      icon: Users,
-      content: (
-        <div className="space-y-8">
-          <Family />
-          <AdvancedParentalControls />
-          <FamilyMeetingScheduler />
-          <FamilyAchievementBadges />
-        </div>
-      )
-    },
-    {
       id: 'tools',
       name: 'Tools & Settings',
       icon: Settings,

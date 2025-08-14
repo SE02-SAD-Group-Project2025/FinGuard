@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowDownIcon, ExclamationTriangleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
-import { Brain, WifiOff } from 'lucide-react';
+import { Brain, WifiOff, XCircle } from 'lucide-react';
 import ExpenseChart from './ExpenseChart';
 import RecentExpenses from './RecentExpenses';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
 import autoCategorizationService from '../services/autoCategorizationService';
 import { useTheme } from '../contexts/ThemeContext';
-import { useOfflineHandler } from '../hooks/useOfflineHandler';
+import { useSubscription } from '../hooks/useSubscription';
 import { SkeletonPage, SkeletonStatsCard, SkeletonChart, SkeletonTable } from './LoadingSkeleton';
+import SpendingPatternAnalysis from './SpendingPatternAnalysis';
+import AnomalyDetection from './AnomalyDetection';
+import BudgetOverflowModal from './BudgetOverflowModal';
 
 const ExpensePage = () => {
   const { isDarkMode } = useTheme();
-  const { isOnline, makeOfflineCapableRequest } = useOfflineHandler();
+  const { isPremium } = useSubscription();
   const [isExpensePopupOpen, setIsExpensePopupOpen] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -26,6 +29,21 @@ const ExpensePage = () => {
   const [categorySuggestions, setCategorySuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [autoCategorizationEnabled, setAutoCategorizationEnabled] = useState(true);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [pendingExpense, setPendingExpense] = useState(null);
+  const [budgetFormData, setBudgetFormData] = useState({
+    category: '',
+    budget_limit: '',
+    budget_period: 'monthly'
+  });
+  
+  // Budget overflow states
+  const [showOverflowModal, setShowOverflowModal] = useState(false);
+  const [overflowData, setOverflowData] = useState(null);
+
+  // Month/Year Selection State - Always default to current date
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
 
   const [formData, setFormData] = useState({
     category: '',
@@ -34,13 +52,14 @@ const ExpensePage = () => {
     description: '',
   });
 
-  // Get current month/year
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear();
+  // Use selected month/year for API calls
+  const currentMonth = selectedMonth;
+  const currentYear = selectedYear;
 
   // Get token for API calls
-  const getToken = () => localStorage.getItem('finguard-token');
+  const getToken = () => {
+    return localStorage.getItem('finguard-token') || localStorage.getItem('token');
+  };
 
   // API call helper
   const apiCall = async (endpoint, options = {}) => {
@@ -97,112 +116,103 @@ const ExpensePage = () => {
     ];
   };
 
-  // Fetch all data with offline support
+  // Fetch all data 
   const fetchAllData = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // Fetch transactions (expenses) with offline fallback
       const token = getToken();
-      const transactionsResult = await makeOfflineCapableRequest({
-        endpoint: 'http://localhost:5000/api/transactions',
-        method: 'GET',
+      if (!token) {
+        setError('Please login to continue');
+        return;
+      }
+
+      // Fetch transactions (expenses)
+      const transactionsResponse = await fetch(`http://localhost:5000/api/transactions?month=${currentMonth}&year=${currentYear}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        offlineKey: 'expenses-transactions',
-        description: 'Load expenses data'
+        }
       });
       
-      if (transactionsResult.data) {
-        const expenseData = transactionsResult.data.filter(tx => tx.type === 'expense');
+      if (transactionsResponse.ok) {
+        const transactionsData = await transactionsResponse.json();
+        // Handle new API response format
+        const transactions = transactionsData.transactions || transactionsData;
+        const expenseData = transactions.filter(tx => tx.type === 'expense');
         setExpenses(expenseData);
       }
 
       // Use predefined expense categories only
       setCategories(getPredefinedExpenseCategories());
 
-      // Fetch current month budgets with offline fallback
-      const budgetsResult = await makeOfflineCapableRequest({
-        endpoint: `http://localhost:5000/api/budgets?month=${currentMonth}&year=${currentYear}`,
-        method: 'GET',
+      // Fetch current month budgets
+      const budgetsResponse = await fetch(`http://localhost:5000/api/budgets?month=${currentMonth}&year=${currentYear}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        offlineKey: `budgets-${currentMonth}-${currentYear}`,
-        description: 'Load budgets data'
+        }
       });
       
-      if (budgetsResult.data) {
-        setBudgets(budgetsResult.data);
+      if (budgetsResponse.ok) {
+        const budgets = await budgetsResponse.json();
+        setBudgets(budgets);
       }
 
-      // Fetch budget summary with offline fallback
-      const summaryResult = await makeOfflineCapableRequest({
-        endpoint: `http://localhost:5000/api/budgets/summary?month=${currentMonth}&year=${currentYear}`,
-        method: 'GET',
+      // Fetch budget summary
+      const summaryResponse = await fetch(`http://localhost:5000/api/budgets/summary?month=${currentMonth}&year=${currentYear}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        offlineKey: `budget-summary-${currentMonth}-${currentYear}`,
-        description: 'Load budget summary'
+        }
       });
       
-      if (summaryResult.data) {
-        setBudgetSummary(summaryResult.data);
+      if (summaryResponse.ok) {
+        const summary = await summaryResponse.json();
+        console.log('Budget Summary Data:', summary); // Debug log
+        setBudgetSummary(summary);
       }
 
-      // Fetch budget alerts with offline fallback
-      const alertsResult = await makeOfflineCapableRequest({
-        endpoint: 'http://localhost:5000/api/budgets/alerts',
-        method: 'GET',
+      // Fetch budget alerts
+      const alertsResponse = await fetch('http://localhost:5000/api/budgets/alerts', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        offlineKey: 'budget-alerts',
-        description: 'Load budget alerts'
+        }
       });
       
-      if (alertsResult.data) {
-        setBudgetAlerts(alertsResult.data);
+      if (alertsResponse.ok) {
+        const alerts = await alertsResponse.json();
+        setBudgetAlerts(alerts);
       }
 
-      // Fetch monthly summary with offline fallback
-      const monthlyResult = await makeOfflineCapableRequest({
-        endpoint: `http://localhost:5000/api/summary?month=${currentMonth}&year=${currentYear}`,
-        method: 'GET',
+      // Fetch monthly summary
+      const monthlyResponse = await fetch(`http://localhost:5000/api/summary?month=${currentMonth}&year=${currentYear}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        offlineKey: `monthly-summary-${currentMonth}-${currentYear}`,
-        description: 'Load monthly summary'
+        }
       });
       
-      if (monthlyResult.data) {
-        setMonthlySummary(monthlyResult.data);
+      if (monthlyResponse.ok) {
+        const monthly = await monthlyResponse.json();
+        setMonthlySummary(monthly);
       }
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      const errorMessage = isOnline ? 
-        'Failed to load data. Please refresh the page.' :
-        'Offline mode: Some data may not be current.';
+      const errorMessage = 'Failed to load data. Please refresh the page.';
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load data on component mount
+  // Load data on component mount and when month/year changes
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   // Clear messages
   useEffect(() => {
@@ -318,10 +328,254 @@ const ExpensePage = () => {
     setCategorySuggestions([]);
   };
 
+  // Handle budget creation from modal
+  const handleCreateBudget = async () => {
+    if (!budgetFormData.budget_limit) {
+      setError('Please enter a budget limit');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = getToken();
+      const response = await fetch('http://localhost:5000/api/budgets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          category: budgetFormData.category,
+          limit_amount: parseFloat(budgetFormData.budget_limit),
+          month: new Date().getMonth() + 1,
+          year: new Date().getFullYear()
+        })
+      });
+
+      if (response.ok) {
+        setSuccess(`Budget created for ${budgetFormData.category}: Rs.${parseFloat(budgetFormData.budget_limit).toLocaleString()}`);
+        setShowBudgetModal(false);
+        
+        // Now process the pending expense
+        if (pendingExpense) {
+          await processPendingExpense();
+        }
+        
+        // Refresh budget data
+        await fetchAllData();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to create budget');
+      }
+    } catch (error) {
+      setError('Failed to create budget');
+      console.error('Budget creation error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Process the pending expense after budget creation
+  const processPendingExpense = async () => {
+    if (!pendingExpense) return;
+
+    try {
+      const token = getToken();
+      const response = await fetch('http://localhost:5000/api/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(pendingExpense)
+      });
+
+      if (response.ok) {
+        const newTransaction = await response.json();
+        setSuccess('Budget created and expense added successfully!');
+        
+        // Update challenge progress
+        try {
+          if (token) {
+            await fetch('http://localhost:5000/api/challenges/update-progress', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                transactionType: 'expense',
+                amount: pendingExpense.amount,
+                category: pendingExpense.category,
+                date: pendingExpense.date
+              })
+            });
+          }
+        } catch (error) {
+          console.error('Error updating challenge progress:', error);
+        }
+        
+        closeBudgetModal();
+        // Refresh the page data
+        fetchAllData();
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to add expense: ${errorData.error}`);
+      }
+    } catch (error) {
+      setError('Budget created but failed to add expense');
+      console.error('Pending expense processing error:', error);
+    } finally {
+      setPendingExpense(null);
+    }
+  };
+
+  // Close budget modal
+  const closeBudgetModal = () => {
+    setShowBudgetModal(false);
+    setPendingExpense(null);
+    setBudgetFormData({
+      category: '',
+      budget_limit: '',
+      budget_period: 'monthly'
+    });
+  };
+
+  // Budget overflow handlers
+  const handleOverflowTransferComplete = (transferResult) => {
+    console.log('✅ Budget transfer completed:', transferResult);
+    const transfer = transferResult.transfer;
+    setSuccess(
+      `✅ Budget transfer completed! LKR ${transfer.transfer_amount} transferred from ${transfer.from_category} to ${transfer.to_category}.`
+    );
+    
+    // Refresh all data after successful transfer
+    fetchAllData();
+    
+    setOverflowData(null);
+    setShowOverflowModal(false);
+  };
+
+  const handleOverflowModalClose = () => {
+    setOverflowData(null);
+    setShowOverflowModal(false);
+  };
+
+  // Handle budget transfer selection
+  const handleBudgetTransferSelection = async (overflow) => {
+    try {
+      setLoading(true);
+      const token = getToken();
+      
+      // Fetch available budgets for transfer
+      const response = await fetch(`http://localhost:5000/api/budget-transfers/available-budgets?excludeCategory=${overflow.category}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const availableBudgets = data.availableBudgets || [];
+        
+        if (availableBudgets.length === 0) {
+          window.alert('❌ No other categories have available budget for transfer.');
+          return;
+        }
+        
+        // Create selection prompt with available categories
+        let selectionText = `💰 Available Categories for Transfer:\n\n`;
+        availableBudgets.forEach((budget, index) => {
+          selectionText += `${index + 1}. ${budget.category} - LKR ${budget.remaining_amount.toFixed(2)} available\n`;
+        });
+        selectionText += `\nEnter the number (1-${availableBudgets.length}) to select a category, or 0 to cancel:`;
+        
+        const selection = window.prompt(selectionText);
+        const selectedIndex = parseInt(selection) - 1;
+        
+        if (selectedIndex >= 0 && selectedIndex < availableBudgets.length) {
+          const selectedBudget = availableBudgets[selectedIndex];
+          
+          if (selectedBudget.remaining_amount < overflow.amount) {
+            window.alert(`❌ Insufficient budget in ${selectedBudget.category}.\nAvailable: LKR ${selectedBudget.remaining_amount.toFixed(2)}\nRequired: LKR ${overflow.amount.toFixed(2)}`);
+            return;
+          }
+          
+          // Perform the budget transfer
+          await performBudgetTransfer(overflow, selectedBudget.category);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching available budgets:', error);
+      window.alert('❌ Failed to load available categories. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Perform the actual budget transfer
+  const performBudgetTransfer = async (overflow, fromCategory) => {
+    try {
+      setLoading(true);
+      const token = getToken();
+      
+      const transferData = {
+        overflowId: overflow.overflowId,
+        fromCategory: fromCategory,
+        toCategory: overflow.category,
+        transferAmount: overflow.amount,
+        reason: `Budget overflow reallocation from ${fromCategory} to ${overflow.category}`
+      };
+
+      const response = await fetch('http://localhost:5000/api/budget-transfers/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(transferData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        window.alert(`✅ Budget Transfer Completed!\n\nLKR ${overflow.amount.toFixed(2)} transferred from ${fromCategory} to ${overflow.category}.\n\nYour budgets have been rebalanced automatically.`);
+        
+        // Refresh data
+        fetchAllData();
+      } else {
+        const error = await response.text();
+        window.alert(`❌ Transfer failed: ${error}`);
+      }
+    } catch (error) {
+      console.error('❌ Budget transfer error:', error);
+      window.alert('❌ Failed to complete budget transfer. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.category || !formData.amount || !formData.date) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    // Check if budget limit exists for this category
+    const budgetStatus = getBudgetStatus(formData.category);
+    if (!budgetStatus) {
+      // No budget limit exists - show budget creation modal
+      setPendingExpense({
+        type: 'expense',
+        category: formData.category,
+        amount: parseFloat(formData.amount),
+        date: formData.date,
+        description: formData.description,
+      });
+      setBudgetFormData({
+        category: formData.category,
+        budget_limit: '',
+        budget_period: 'monthly'
+      });
+      setShowBudgetModal(true);
       return;
     }
 
@@ -337,16 +591,36 @@ const ExpensePage = () => {
     };
 
     try {
-      const result = await makeOfflineCapableRequest({
-        endpoint: '/api/transactions',
+      const token = getToken();
+      console.log('🔍 Submitting expense:', payload);
+      console.log('🔍 Token available:', !!token);
+      
+      const response = await fetch('http://localhost:5000/api/transactions', {
         method: 'POST',
-        data: payload,
-        description: `Add expense: ${formData.description || 'Expense'} - $${formData.amount}`
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
       });
+      
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response ok:', response.ok);
 
-      if (result.queued) {
-        setSuccess('Expense queued - will be saved when connection is restored!');
-      } else if (result.data) {
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔍 Transaction result:', result);
+        
+        // Enhanced overflow handling with proper transfer interface
+        if (result.budgetOverflow && result.budgetOverflow.requiresTransfer) {
+          console.log('🚨 Budget overflow detected:', result.budgetOverflow);
+          setOverflowData(result.budgetOverflow);
+          setShowOverflowModal(true);
+          setIsExpensePopupOpen(false); // Close the expense form
+          setLoading(false);
+          return; // Don't proceed with normal success handling yet
+        }
+        
         setSuccess('Expense added successfully!');
         
         // Learn from this transaction for auto-categorization
@@ -361,6 +635,29 @@ const ExpensePage = () => {
           } catch (error) {
             console.error('Error learning from transaction:', error);
           }
+        }
+
+        // Update challenge progress based on this expense
+        try {
+          const token = localStorage.getItem('finguard-token');
+          if (token) {
+            await fetch('http://localhost:5000/api/challenges/update-progress', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                transactionType: 'expense',
+                amount: parseFloat(formData.amount),
+                category: formData.category,
+                date: formData.date
+              })
+            });
+          }
+        } catch (error) {
+          console.error('Error updating challenge progress:', error);
+          // Don't fail the expense submission if challenge update fails
         }
         
         // Check if this will trigger a budget alert
@@ -447,20 +744,14 @@ const ExpensePage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Navbar />
         
-        {/* Offline Status */}
-        {!isOnline && (
-          <div className="mb-4 p-4 rounded-lg flex items-center gap-2 bg-yellow-100 text-yellow-800 border border-yellow-200">
-            <WifiOff className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">You are currently offline. Changes will be synced when connection is restored.</span>
-          </div>
-        )}
+        {/* Offline Status - Removed for now */}
 
         {/* Messages */}
         <MessageAlert message={error} type="error" />
         <MessageAlert message={success} type="success" />
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4">
           <div>
             <h1 className={`text-3xl font-bold ${
               isDarkMode ? 'text-white' : 'text-gray-900'
@@ -471,9 +762,56 @@ const ExpensePage = () => {
             <p className={`text-sm ${
               isDarkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
-              Categories: {categories.length} available • Budgets: {budgets.length} set
+              {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} • 
+              Categories: {categories.length} • Budgets: {budgets.length}
             </p>
           </div>
+          
+          {/* Month/Year Selector */}
+          <div className="flex items-center space-x-3">
+            <label className={`text-sm font-medium ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              View Data For:
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - i;
+                return (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 mb-6">
           <div className="flex gap-3">
             <button
               onClick={() => window.location.href = '/budget'}
@@ -858,6 +1196,140 @@ const ExpensePage = () => {
           </div>
           </div>
         )}
+
+        {/* AI Analytics for Expenses - Admin and Premium Users Only */}
+        {isPremium() && (
+          <>
+            {/* AI Spending Pattern Analysis */}
+            <div className="mt-8">
+              <SpendingPatternAnalysis />
+            </div>
+
+            {/* AI Anomaly Detection */}
+            <div className="mt-8">
+              <AnomalyDetection />
+            </div>
+          </>
+        )}
+
+        {/* Budget Creation Modal */}
+        {showBudgetModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`p-6 rounded-2xl max-w-md w-full mx-4 ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Add Budget Limit First
+                  </h3>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Create a budget for "{budgetFormData.category}" before adding expenses
+                  </p>
+                </div>
+                <button
+                  onClick={closeBudgetModal}
+                  className={`text-gray-400 hover:text-gray-600 ${isDarkMode ? 'hover:text-gray-300' : ''}`}
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    value={budgetFormData.category}
+                    disabled
+                    className={`w-full px-3 py-2 border rounded-lg ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-gray-300' 
+                        : 'bg-gray-100 border-gray-300 text-gray-600'
+                    } cursor-not-allowed`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Monthly Budget Limit (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    value={budgetFormData.budget_limit}
+                    onChange={(e) => setBudgetFormData({...budgetFormData, budget_limit: e.target.value})}
+                    placeholder="e.g., 25000"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Budget Period
+                  </label>
+                  <select
+                    value={budgetFormData.budget_period}
+                    onChange={(e) => setBudgetFormData({...budgetFormData, budget_period: e.target.value})}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+
+                {pendingExpense && (
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                      Pending Expense:
+                    </p>
+                    <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                      Rs.{pendingExpense.amount.toLocaleString()} - {pendingExpense.description || 'No description'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex space-x-3 pt-6">
+                <button
+                  onClick={closeBudgetModal}
+                  className={`flex-1 px-4 py-2 border rounded-lg transition-colors ${
+                    isDarkMode 
+                      ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateBudget}
+                  disabled={loading || !budgetFormData.budget_limit}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Creating...' : 'Create Budget & Add Expense'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Budget Overflow Modal */}
+        <BudgetOverflowModal
+          overflowData={overflowData}
+          isOpen={showOverflowModal}
+          onClose={handleOverflowModalClose}
+          onTransferComplete={handleOverflowTransferComplete}
+        />
       </div>
     </AnimatedPage>
   );

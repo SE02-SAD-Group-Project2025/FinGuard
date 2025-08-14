@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../hooks/useSubscription';
+import SpendingPatternAnalysis from './SpendingPatternAnalysis';
 import {
   Edit3,
   Lightbulb,
@@ -46,6 +48,7 @@ ChartJS.register(
 
 const BudgetPage = () => {
   const { isDarkMode } = useTheme();
+  const { isPremium, user } = useSubscription();
   const [isBudgetSettingsOpen, setIsBudgetSettingsOpen] = useState(false);
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,6 +62,10 @@ const BudgetPage = () => {
   const [budgetSummary, setBudgetSummary] = useState([]);
   const [budgetAlerts, setBudgetAlerts] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState({ income: 0, expenses: 0, balance: 0 });
+  
+  // Month/Year Selection State - Always default to current date
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   
   // Form state for new budgets
   const [newBudget, setNewBudget] = useState({
@@ -74,10 +81,9 @@ const BudgetPage = () => {
     saved: 15000
   });
 
-  // Get current month/year
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear();
+  // Use selected month/year for API calls
+  const currentMonth = selectedMonth;
+  const currentYear = selectedYear;
 
   // Get token for API calls
   const getToken = () => localStorage.getItem('finguard-token');
@@ -146,7 +152,7 @@ const BudgetPage = () => {
     setError('');
     
     try {
-      // Fetch budgets for current month
+      // Fetch budgets for selected month/year
       const budgetsData = await apiCall(`/api/budgets?month=${currentMonth}&year=${currentYear}`);
       if (budgetsData) setBudgets(budgetsData);
 
@@ -169,11 +175,11 @@ const BudgetPage = () => {
     }
   };
 
-  // Load data on component mount
+  // Load data on component mount and when month/year changes
   useEffect(() => {
     fetchBudgetData();
     fetchAIInsights();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const fetchAIInsights = async () => {
     try {
@@ -367,8 +373,8 @@ const BudgetPage = () => {
     setNewBudget({
       category: '',
       limit_amount: '',
-      month: currentMonth,
-      year: currentYear
+      month: selectedMonth,
+      year: selectedYear
     });
   };
   const openSavingsModal = () => setIsSavingsModalOpen(true);
@@ -397,6 +403,31 @@ const BudgetPage = () => {
 
       if (response) {
         setSuccess(`Budget for ${newBudget.category} added successfully!`);
+        
+        // Update challenge progress based on this budget creation
+        try {
+          const token = localStorage.getItem('finguard-token');
+          if (token) {
+            await fetch('http://localhost:5000/api/challenges/update-progress', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                transactionType: 'budget',
+                amount: parseFloat(newBudget.limit_amount),
+                category: newBudget.category,
+                date: new Date().toISOString().split('T')[0],
+                budgetAction: 'create'
+              })
+            });
+          }
+        } catch (error) {
+          console.error('Error updating challenge progress:', error);
+          // Don't fail the budget creation if challenge update fails
+        }
+        
         closeBudgetSettings();
         fetchBudgetData(); // Refresh data
       }
@@ -420,6 +451,31 @@ const BudgetPage = () => {
 
       if (response) {
         setSuccess('Budget updated successfully!');
+        
+        // Update challenge progress based on this budget update
+        try {
+          const token = localStorage.getItem('finguard-token');
+          if (token) {
+            await fetch('http://localhost:5000/api/challenges/update-progress', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                transactionType: 'budget',
+                amount: parseFloat(updatedData.limit_amount || 0),
+                category: updatedData.category || 'General',
+                date: new Date().toISOString().split('T')[0],
+                budgetAction: 'update'
+              })
+            });
+          }
+        } catch (error) {
+          console.error('Error updating challenge progress:', error);
+          // Don't fail the budget update if challenge update fails
+        }
+        
         fetchBudgetData(); // Refresh data
       }
     } catch (error) {
@@ -738,17 +794,56 @@ const BudgetPage = () => {
           <MessageAlert message={success} type="success" />
 
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className={`text-3xl font-bold text-left mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Budget Management</h1>
               <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Track spending, set limits, and receive smart alerts</p>
               <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Categories: {availableCategories.length} available • Matching ExpensePage categories
+                {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} • 
+                Categories: {availableCategories.length} available
               </p>
             </div>
-            <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              <BarChart3 className="w-4 h-4" />
-              <span>Updated now</span>
+            
+            {/* Month/Year Selector */}
+            <div className="flex items-center space-x-3">
+              <label className={`text-sm font-medium ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                View Data For:
+              </label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           </div>
 
@@ -760,7 +855,7 @@ const BudgetPage = () => {
               <div>
                 <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Monthly Overview</h3>
                 <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {new Date(currentYear, currentMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -1135,6 +1230,120 @@ const BudgetPage = () => {
             </div>
           </div>
         </div>
+
+        {/* AI Budget Insights - Admin and Premium Users Only */}
+        {isPremium() && (
+          <>
+            {/* AI Budget Insights Section */}
+            <div className={`mt-8 p-6 rounded-xl shadow-sm transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`}>
+              <div className="flex items-center mb-6">
+                <Brain className={`w-6 h-6 mr-3 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                <div>
+                  <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    AI Budget Insights
+                  </h2>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    AI-powered budget recommendations and variance analysis
+                  </p>
+                </div>
+              </div>
+
+              {/* AI Budget Recommendations */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Budget Variance Alert */}
+                {budgetSummary.filter(b => (b.spent / b.budget_limit) > 0.8).length > 0 && (
+                  <div className={`p-4 rounded-lg border-l-4 border-yellow-500 ${
+                    isDarkMode ? 'bg-yellow-900/20' : 'bg-yellow-50'
+                  }`}>
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+                      <div>
+                        <h4 className={`font-semibold ${isDarkMode ? 'text-yellow-300' : 'text-yellow-800'}`}>
+                          Budget Alert
+                        </h4>
+                        <p className={`text-sm ${isDarkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                          {budgetSummary.filter(b => (b.spent / b.budget_limit) > 0.8).length} categories are above 80% of budget
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Optimization Suggestion */}
+                <div className={`p-4 rounded-lg border-l-4 border-blue-500 ${
+                  isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'
+                }`}>
+                  <div className="flex items-start">
+                    <Lightbulb className="w-5 h-5 text-blue-600 mr-3 mt-0.5" />
+                    <div>
+                      <h4 className={`font-semibold ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                        Smart Suggestion
+                      </h4>
+                      <p className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                        Consider increasing your {budgetSummary.length > 0 ? budgetSummary[0]?.category : 'Food'} budget by 10% based on spending patterns
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Budget Performance Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Budget Efficiency
+                      </p>
+                      <p className={`text-xl font-bold text-green-600`}>
+                        {budgetSummary.length > 0 ? 
+                          Math.round((budgetSummary.reduce((sum, b) => sum + b.spent, 0) / 
+                          budgetSummary.reduce((sum, b) => sum + b.budget_limit, 0)) * 100) : 0}%
+                      </p>
+                    </div>
+                    <Target className="w-8 h-8 text-green-600" />
+                  </div>
+                </div>
+                
+                <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Categories Tracked
+                      </p>
+                      <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {budgets.length}
+                      </p>
+                    </div>
+                    <BarChart3 className={`w-8 h-8 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                  </div>
+                </div>
+                
+                <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Avg Monthly Spend
+                      </p>
+                      <p className={`text-xl font-bold text-purple-600`}>
+                        Rs. {budgetSummary.length > 0 ? 
+                          Math.round(budgetSummary.reduce((sum, b) => sum + b.spent, 0)).toLocaleString() : 0}
+                      </p>
+                    </div>
+                    <DollarSign className="w-8 h-8 text-purple-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Spending Pattern Analysis */}
+            <div className="mt-8">
+              <SpendingPatternAnalysis />
+            </div>
+          </>
+        )}
 
         {/* Modals */}
         <BudgetSettingsModal />

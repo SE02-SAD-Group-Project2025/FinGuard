@@ -61,9 +61,11 @@ const Dashboard = () => {
   const [liabilitiesSummary, setLiabilitiesSummary] = useState({ total_current_balance: 0 });
   const [loading, setLoading] = useState(true);
 
+  // 📅 Month/Year Selection State - Always default to current date
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+
   const token = localStorage.getItem('finguard-token');
-  const month = new Date().getMonth() + 1;
-  const year = new Date().getFullYear();
 
   // 🔄 Keep all original backend data fetching logic + Add liabilities
   useEffect(() => {
@@ -77,7 +79,7 @@ const Dashboard = () => {
         setLoading(true);
 
         // Fetch summary
-        const summaryResponse = await fetch(`http://localhost:5000/api/summary?month=${month}&year=${year}`, { headers });
+        const summaryResponse = await fetch(`http://localhost:5000/api/summary?month=${selectedMonth}&year=${selectedYear}`, { headers });
         const summaryData = await summaryResponse.json();
         setSummary({
           income: summaryData.income || 0,
@@ -86,10 +88,12 @@ const Dashboard = () => {
         });
 
         // Fetch transactions
-        const transactionsResponse = await fetch(`http://localhost:5000/api/transactions`, { headers });
+        const transactionsResponse = await fetch(`http://localhost:5000/api/transactions?month=${selectedMonth}&year=${selectedYear}`, { headers });
         const transactionsData = await transactionsResponse.json();
         console.log("Fetched transactions:", transactionsData);
-        setTransactions(transactionsData);
+        // Handle new API response format
+        const transactions = transactionsData.transactions || transactionsData;
+        setTransactions(transactions);
         
         // ✅ FIXED: Fetch Liabilities Summary
         try {
@@ -108,7 +112,7 @@ const Dashboard = () => {
         }
 
         // ✨ Enhanced chart data processing with better colors
-        const incomeGroups = transactionsData
+        const incomeGroups = transactions
           .filter(tx => tx.type === 'income')
           .reduce((acc, tx) => {
             acc[tx.category] = (acc[tx.category] || 0) + parseFloat(tx.amount);
@@ -132,7 +136,7 @@ const Dashboard = () => {
           }],
         });
 
-        const expenseGroups = transactionsData
+        const expenseGroups = transactions
           .filter(tx => tx.type === 'expense')
           .reduce((acc, tx) => {
             acc[tx.category] = (acc[tx.category] || 0) + parseFloat(tx.amount);
@@ -166,7 +170,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [token, month, year]);
+  }, [token, selectedMonth, selectedYear]);
 
   // 📊 Loading state component
   const ChartSkeleton = () => (
@@ -201,16 +205,62 @@ const Dashboard = () => {
         <Cards summary={summary} liabilitiesSummary={liabilitiesSummary} />
         <Buttons />
 
-        {/* ✨ Improved section title */}
-        <div className="mt-8 mb-6 text-center">
-          <h2 className={`text-3xl font-bold ${
-            isDarkMode ? 'text-white' : 'text-gray-900'
-          }`}>Your Income And Expense Summary</h2>
-          <p className={`mt-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </p>
+        {/* ✨ Improved section title with Month/Year Selector */}
+        <div className="mt-8 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="text-center lg:text-left">
+              <h2 className={`text-3xl font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>Your Income And Expense Summary</h2>
+              <p className={`mt-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}>
+                {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+            
+            {/* 📅 Month/Year Selector */}
+            <div className="flex items-center space-x-3 mt-4 lg:mt-0">
+              <label className={`text-sm font-medium ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                View Data For:
+              </label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* ✨ Improved chart layout with better styling */}

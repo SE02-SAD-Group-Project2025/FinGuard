@@ -692,12 +692,24 @@ const BillReminders = () => {
                       : 'bg-white border-gray-300 text-gray-900'
                   }`}
                 >
-                  <option value="Bills & Utilities">Bills & Utilities</option>
-                  <option value="Insurance">Insurance</option>
-                  <option value="Health & Fitness">Health & Fitness</option>
-                  <option value="Entertainment">Entertainment</option>
-                  <option value="Transportation">Transportation</option>
-                  <option value="Other">Other</option>
+                  <option value="Bills & Utilities">⚡ Bills & Utilities</option>
+                  <option value="Utilities">💡 Utilities</option>
+                  <option value="Phone & Internet">📱 Phone & Internet</option>
+                  <option value="Subscriptions">📺 Subscriptions</option>
+                  <option value="Insurance">🛡️ Insurance</option>
+                  <option value="Healthcare">🏥 Healthcare</option>
+                  <option value="Transportation">🚗 Transportation</option>
+                  <option value="Fuel">⛽ Fuel</option>
+                  <option value="Food & Dining">🍽️ Food & Dining</option>
+                  <option value="Groceries">🛒 Groceries</option>
+                  <option value="Shopping">🛍️ Shopping</option>
+                  <option value="Clothing">👕 Clothing</option>
+                  <option value="Entertainment">🎮 Entertainment</option>
+                  <option value="Education">📚 Education</option>
+                  <option value="Travel">✈️ Travel</option>
+                  <option value="Personal Care">🧴 Personal Care</option>
+                  <option value="Home Maintenance">🔧 Home Maintenance</option>
+                  <option value="Other">📋 Other</option>
                 </select>
               </div>
 

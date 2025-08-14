@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../hooks/useSubscription';
+import AnomalyDetection from './AnomalyDetection';
 import { 
   Bug, 
   Lightbulb, 
@@ -25,6 +27,7 @@ import {
 
 const ReportsPage = () => {
   const { isDarkMode } = useTheme();
+  const { isPremium } = useSubscription();
   const [reports, setReports] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -563,6 +566,13 @@ const ReportsPage = () => {
                 </div>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* AI Anomaly Detection - Admin and Premium Users Only */}
+        {isPremium() && (
+          <div className="mt-8">
+            <AnomalyDetection />
           </div>
         )}
       </div>

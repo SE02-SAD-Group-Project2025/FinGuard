@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(npm start)",
+      "Bash(powershell:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run:*)",
+      "Bash(start \"FinGuard Backend\" node app.js)",
+      "Bash(psql:*)",
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(npx eslint:*)",
+      "Bash(sed:*)",
+      "Bash(npx react-scripts start:*)",
+      "Bash(npm install)",
+      "Bash(find:*)",
+      "Bash(cd:*)",
+      "Bash(timeout:*)",
+      "Bash(echo)",
+      "Bash(start:*)",
+      "Bash(taskkill:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": []
+  }
+}

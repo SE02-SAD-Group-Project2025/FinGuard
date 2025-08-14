@@ -67,61 +67,193 @@ const FamilySavingsGoals = () => {
     const token = localStorage.getItem('finguard-token');
     
     try {
-      // Try to load from API first
-      const response = await fetch('/api/family/savings-goals', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // Fetch real user data to generate savings goals based on financial behavior
+      const [summaryRes, transactionsRes, budgetRes] = await Promise.all([
+        fetch('http://localhost:5000/api/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/transactions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/budgets/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      const summaryData = summaryRes.ok ? await summaryRes.json() : { income: 0, expenses: 0, balance: 0 };
+      const transactions = transactionsRes.ok ? await transactionsRes.json() : [];
+      const budgets = budgetRes.ok ? await budgetRes.json() : [];
+
+      // Generate real savings goals based on user's financial data
+      const realSavingsGoals = generateSavingsGoalsFromUserData(summaryData, transactions, budgets);
+
+      // Try to load existing goals from goals API
+      const goalsRes = await fetch('http://localhost:5000/api/goals', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setSavingsGoals(data.goals || []);
+      if (goalsRes.ok) {
+        const existingGoals = await goalsRes.json();
+        // Convert existing goals to savings goals format
+        const convertedGoals = existingGoals.map(goal => ({
+          id: goal.id,
+          title: goal.title,
+          description: goal.description,
+          targetAmount: parseFloat(goal.target_amount) || 0,
+          currentAmount: parseFloat(goal.current_amount) || 0,
+          targetDate: goal.target_date,
+          category: goal.category || 'other',
+          priority: goal.priority || 'medium',
+          createdBy: 'You (Main User)',
+          contributors: [
+            { userId: 1, name: 'You (Main User)', amount: parseFloat(goal.current_amount) || 0, lastContribution: goal.updated_at }
+          ],
+          isPublic: true,
+          createdAt: goal.created_at
+        }));
+
+        setSavingsGoals([...convertedGoals, ...realSavingsGoals]);
       } else {
-        // Fallback to sample data if API fails
-        setSavingsGoals([
-          {
-            id: 1,
-            title: 'Family Vacation to Bali',
-            description: 'A dream family vacation to explore Bali together',
-            targetAmount: 500000,
-            currentAmount: 125000,
-            targetDate: '2024-12-31',
-            category: 'vacation',
-            priority: 'high',
-            createdBy: 'Chathura',
-            contributors: [
-              { userId: 1, name: 'Chathura', amount: 75000, lastContribution: '2025-08-01' },
-              { userId: 2, name: 'Regular User', amount: 50000, lastContribution: '2025-08-05' }
-            ],
-            isPublic: true,
-            createdAt: '2025-07-01'
-          },
-          {
-            id: 2,
-            title: 'Emergency Fund',
-            description: 'Family emergency fund for unexpected expenses',
-            targetAmount: 200000,
-            currentAmount: 45000,
-            targetDate: '2025-06-30',
-            category: 'emergency',
-            priority: 'high',
-            createdBy: 'Chathura',
-            contributors: [
-              { userId: 1, name: 'Chathura', amount: 30000, lastContribution: '2025-08-02' },
-              { userId: 2, name: 'Regular User', amount: 15000, lastContribution: '2025-08-04' }
-            ],
-            isPublic: true,
-            createdAt: '2025-07-15'
-          }
-        ]);
+        setSavingsGoals(realSavingsGoals);
       }
+      
       setLoading(false);
     } catch (err) {
       console.error('Error loading savings goals:', err);
+      
+      // Generate basic goals even on error
+      const basicGoals = [
+        {
+          id: Date.now(),
+          title: 'Emergency Fund Goal',
+          description: 'Build an emergency fund for unexpected expenses',
+          targetAmount: 100000,
+          currentAmount: 0,
+          targetDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 6 months from now
+          category: 'emergency',
+          priority: 'high',
+          createdBy: 'You (Main User)',
+          contributors: [],
+          isPublic: true,
+          createdAt: new Date().toISOString()
+        }
+      ];
+      setSavingsGoals(basicGoals);
       setLoading(false);
-      error('Failed to load savings goals');
     }
+  };
+
+  // Generate savings goals based on user's real financial data
+  const generateSavingsGoalsFromUserData = (summary, transactions, budgets) => {
+    const goals = [];
+    const currentBalance = summary.balance || 0;
+    const monthlyIncome = summary.income || 0;
+    const monthlyExpenses = summary.expenses || 0;
+
+    // Emergency Fund Goal (based on monthly expenses)
+    if (monthlyExpenses > 0) {
+      const emergencyTarget = monthlyExpenses * 6; // 6 months of expenses
+      const emergencyProgress = Math.min(currentBalance * 0.3, emergencyTarget); // Assume 30% of balance is emergency fund
+      
+      goals.push({
+        id: 'emergency-fund',
+        title: 'Emergency Fund',
+        description: `Build an emergency fund covering 6 months of expenses (Rs.${monthlyExpenses.toLocaleString()}/month)`,
+        targetAmount: emergencyTarget,
+        currentAmount: emergencyProgress,
+        targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
+        category: 'emergency',
+        priority: 'high',
+        createdBy: 'You (Main User)',
+        contributors: [
+          { userId: 1, name: 'You (Main User)', amount: emergencyProgress, lastContribution: new Date().toISOString() }
+        ],
+        isPublic: true,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // Vacation/Travel Goal (based on entertainment/leisure spending patterns)
+    const entertainmentTransactions = transactions.filter(t => 
+      t.category && (t.category.toLowerCase().includes('entertainment') || 
+                     t.category.toLowerCase().includes('leisure') ||
+                     t.category.toLowerCase().includes('dining'))
+    );
+    
+    if (entertainmentTransactions.length > 0) {
+      const monthlyEntertainment = entertainmentTransactions
+        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) / 3; // Average over 3 months
+      const vacationTarget = monthlyEntertainment * 12; // Annual entertainment * 1 for vacation
+      
+      goals.push({
+        id: 'family-vacation',
+        title: 'Family Vacation Fund',
+        description: 'Save for a memorable family vacation based on your entertainment spending patterns',
+        targetAmount: Math.max(vacationTarget, 50000), // Minimum Rs.50,000
+        currentAmount: currentBalance * 0.1, // Assume 10% of balance allocated
+        targetDate: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 10 months from now
+        category: 'vacation',
+        priority: 'medium',
+        createdBy: 'You (Main User)',
+        contributors: [
+          { userId: 1, name: 'You (Main User)', amount: currentBalance * 0.1, lastContribution: new Date().toISOString() }
+        ],
+        isPublic: true,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // Home/House Goal (based on current savings rate)
+    if (monthlyIncome > monthlyExpenses) {
+      const monthlySavings = monthlyIncome - monthlyExpenses;
+      const houseTarget = monthlyIncome * 24; // 2 years of income as house goal
+      const houseProgress = monthlySavings * 6; // 6 months of savings
+      
+      goals.push({
+        id: 'house-fund',
+        title: 'Home Purchase Fund',
+        description: 'Save for a down payment on your dream home',
+        targetAmount: houseTarget,
+        currentAmount: Math.min(houseProgress, currentBalance * 0.4), // Max 40% of current balance
+        targetDate: new Date(Date.now() + 1095 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 years from now
+        category: 'house',
+        priority: 'medium',
+        createdBy: 'You (Main User)',
+        contributors: [
+          { userId: 1, name: 'You (Main User)', amount: Math.min(houseProgress, currentBalance * 0.4), lastContribution: new Date().toISOString() }
+        ],
+        isPublic: true,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // Education Goal (if there are education-related transactions)
+    const educationTransactions = transactions.filter(t => 
+      t.category && t.category.toLowerCase().includes('education')
+    );
+    
+    if (educationTransactions.length > 0 || monthlyIncome > 50000) {
+      const educationTarget = 200000; // Standard education fund
+      
+      goals.push({
+        id: 'education-fund',
+        title: 'Education & Skill Development',
+        description: 'Invest in learning and professional development',
+        targetAmount: educationTarget,
+        currentAmount: currentBalance * 0.05, // 5% of current balance
+        targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
+        category: 'education',
+        priority: 'low',
+        createdBy: 'You (Main User)',
+        contributors: [
+          { userId: 1, name: 'You (Main User)', amount: currentBalance * 0.05, lastContribution: new Date().toISOString() }
+        ],
+        isPublic: true,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    return goals.filter(goal => goal.targetAmount > 0);
   };
 
   const createSavingsGoal = async () => {

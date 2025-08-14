@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Edit2, Save, X, Trash2 } from 'lucide-react';
+import { Edit2, Save, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDelete }) => {
   const { isDarkMode } = useTheme();
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [showCount, setShowCount] = useState(6); // Show 6 items initially
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleEditClick = (expense) => {
     setEditingId(expense.id);
@@ -99,7 +101,7 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
       }`}>Recent Expenses</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-6xl">
-        {expenses.map((expense) => (
+        {expenses.slice(0, isExpanded ? expenses.length : showCount).map((expense) => (
           <div key={expense.id} className={`rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow ${
             isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
@@ -170,6 +172,29 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
                           {expense.category}
                         </span>
                       )}
+                      
+                      {/* Budget Transfer Information */}
+                      {expense.is_overflow && expense.transfer_from_category && (
+                        <div className={`mt-2 p-2 rounded-md border-l-4 ${
+                          isDarkMode 
+                            ? 'bg-orange-900/20 border-orange-500 text-orange-300' 
+                            : 'bg-orange-50 border-orange-400 text-orange-800'
+                        }`}>
+                          <div className="flex items-center space-x-1">
+                            <span className="text-xs">🔄</span>
+                            <span className="text-xs font-medium">Budget Transfer:</span>
+                          </div>
+                          <p className="text-xs mt-1">
+                            LKR {expense.overflow_amount ? parseFloat(expense.overflow_amount).toFixed(2) : '0.00'} 
+                            {' '}transferred from <strong>{expense.transfer_from_category}</strong>
+                          </p>
+                          <p className={`text-xs ${
+                            isDarkMode ? 'text-orange-400' : 'text-orange-600'
+                          }`}>
+                            Budget exceeded - automatically rebalanced
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -221,6 +246,32 @@ const RecentExpenses = ({ expenses, onExpenseUpdate, onExpenseEdit, onExpenseDel
           </div>
         ))}
       </div>
+
+      {/* Show More/Less Button */}
+      {expenses.length > showCount && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`flex items-center justify-center mx-auto px-4 py-2 rounded-lg border transition-colors duration-200 ${
+              isDarkMode 
+                ? 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="w-4 h-4 mr-2" />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 mr-2" />
+                Show More ({expenses.length - showCount} more)
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Total Summary */}
       <div className={`mt-6 p-4 rounded-lg shadow-sm border transition-colors duration-300 ${

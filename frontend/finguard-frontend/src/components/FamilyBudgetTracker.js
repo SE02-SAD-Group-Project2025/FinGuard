@@ -12,78 +12,145 @@ import {
   Bell,
   Eye
 } from 'lucide-react';
-import realTimeService from '../services/realTimeService';
-
 const FamilyBudgetTracker = () => {
   const [budgetStatus, setBudgetStatus] = useState([]);
   const [familySummary, setFamilySummary] = useState(null);
   const [recentAlerts, setRecentAlerts] = useState([]);
   const [liveUpdates, setLiveUpdates] = useState([]);
   const [isLiveMode, setIsLiveMode] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize real-time service
-    realTimeService.initialize();
-
-    // Set up event listeners
-    const handleBudgetUpdate = (data) => {
-      setBudgetStatus(prev => {
-        const updated = [...prev];
-        const index = updated.findIndex(member => member.userId === data.userId);
-        if (index >= 0) {
-          updated[index] = { ...updated[index], ...data };
-        } else {
-          updated.push(data);
-        }
-        return updated;
-      });
-    };
-
-    const handleBudgetAlert = (alert) => {
-      setRecentAlerts(prev => [alert, ...prev.slice(0, 4)]);
-    };
-
-    const handleExpenseUpdate = (update) => {
-      setLiveUpdates(prev => [
-        {
-          ...update,
-          timestamp: new Date(),
-          id: Date.now() + Math.random()
-        },
-        ...prev.slice(0, 9)
-      ]);
-    };
-
-    const handleDataLoaded = (data) => {
-      setFamilySummary(data.summary);
-      if (data.members) {
-        setBudgetStatus(data.members.map(member => ({
-          userId: member.userId,
-          memberName: member.username,
-          role: member.role,
-          monthlyBudget: member.monthlyBudget,
-          currentSpent: member.monthlyExpenses,
-          usagePercentage: (member.monthlyExpenses / member.monthlyBudget) * 100,
-          isOverBudget: member.monthlyExpenses >= member.monthlyBudget
-        })));
-      }
-    };
-
-    realTimeService.on('budget-status-update', handleBudgetUpdate);
-    realTimeService.on('budget-alert', handleBudgetAlert);
-    realTimeService.on('family-expense-update', handleExpenseUpdate);
-    realTimeService.on('budget-data-loaded', handleDataLoaded);
-
-    // Load initial data
-    realTimeService.loadFamilyBudgetData();
-
-    return () => {
-      realTimeService.off('budget-status-update', handleBudgetUpdate);
-      realTimeService.off('budget-alert', handleBudgetAlert);
-      realTimeService.off('family-expense-update', handleExpenseUpdate);
-      realTimeService.off('budget-data-loaded', handleDataLoaded);
-    };
+    loadRealBudgetData();
+    
+    // Set up polling for real-time updates every 30 seconds
+    const interval = setInterval(loadRealBudgetData, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  const loadRealBudgetData = async () => {
+    const token = localStorage.getItem('finguard-token');
+    if (!token) return;
+
+    try {
+      // Fetch real user data
+      const [summaryRes, budgetsRes, transactionsRes] = await Promise.all([
+        fetch('http://localhost:5000/api/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/budgets/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/transactions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      const summaryData = summaryRes.ok ? await summaryRes.json() : { income: 0, expenses: 0, balance: 0 };
+      const budgetsData = budgetsRes.ok ? await budgetsRes.json() : [];
+      const transactionsData = transactionsRes.ok ? await transactionsRes.json() : [];
+
+      // Create family summary based on real data
+      const realFamilySummary = {
+        totalBudget: budgetsData.reduce((sum, b) => sum + (parseFloat(b.budget_limit) || 0), 0),
+        totalSpent: budgetsData.reduce((sum, b) => sum + (parseFloat(b.spent) || 0), 0),
+        totalMembers: 1, // Currently just the main user
+        averageUsage: budgetsData.length > 0 ? 
+          budgetsData.reduce((sum, b) => {
+            const limit = parseFloat(b.budget_limit) || 1;
+            const spent = parseFloat(b.spent) || 0;
+            return sum + ((spent / limit) * 100);
+          }, 0) / budgetsData.length : 0,
+        activeAlerts: budgetsData.filter(b => 
+          (parseFloat(b.spent) || 0) > (parseFloat(b.budget_limit) || 0) * 0.9
+        ).length
+      };
+
+      // Generate budget status for main user
+      const userBudgetStatus = [{
+        userId: 1,
+        memberName: 'You (Main User)',
+        role: 'parent',
+        monthlyBudget: realFamilySummary.totalBudget,
+        currentSpent: realFamilySummary.totalSpent,
+        usagePercentage: realFamilySummary.totalBudget > 0 ? 
+          (realFamilySummary.totalSpent / realFamilySummary.totalBudget) * 100 : 0,
+        isOverBudget: realFamilySummary.totalSpent > realFamilySummary.totalBudget,
+        categories: budgetsData.map(b => ({
+          name: b.category,
+          spent: parseFloat(b.spent) || 0,
+          limit: parseFloat(b.budget_limit) || 0,
+          percentage: (parseFloat(b.budget_limit) || 0) > 0 ? 
+            ((parseFloat(b.spent) || 0) / (parseFloat(b.budget_limit) || 0)) * 100 : 0
+        }))
+      }];
+
+      // Generate alerts based on budget status
+      const alerts = budgetsData
+        .filter(b => {
+          const spent = parseFloat(b.spent) || 0;
+          const limit = parseFloat(b.budget_limit) || 0;
+          return spent > limit * 0.9; // Alert when 90% or more is spent
+        })
+        .map(b => ({
+          id: `alert-${b.category}`,
+          type: (parseFloat(b.spent) || 0) > (parseFloat(b.budget_limit) || 0) ? 'over_budget' : 'approaching_limit',
+          memberName: 'You (Main User)',
+          category: b.category,
+          message: (parseFloat(b.spent) || 0) > (parseFloat(b.budget_limit) || 0) ? 
+            `${b.category} budget exceeded by Rs.${((parseFloat(b.spent) || 0) - (parseFloat(b.budget_limit) || 0)).toLocaleString()}` :
+            `${b.category} budget is 90% used`,
+          timestamp: new Date(),
+          severity: (parseFloat(b.spent) || 0) > (parseFloat(b.budget_limit) || 0) ? 'high' : 'medium'
+        }));
+
+      // Generate recent updates from transactions
+      const recentUpdates = transactionsData
+        .slice(0, 5)
+        .map(t => ({
+          id: t.id,
+          type: 'expense',
+          memberName: 'You (Main User)',
+          category: t.category,
+          amount: parseFloat(t.amount) || 0,
+          description: t.description,
+          timestamp: new Date(t.date),
+          impact: 'normal'
+        }));
+
+      setFamilySummary(realFamilySummary);
+      setBudgetStatus(userBudgetStatus);
+      setRecentAlerts(alerts);
+      setLiveUpdates(recentUpdates);
+      setLoading(false);
+
+    } catch (error) {
+      console.error('Error loading real budget data:', error);
+      
+      // Fallback to basic data structure
+      setFamilySummary({
+        totalBudget: 0,
+        totalSpent: 0,
+        totalMembers: 1,
+        averageUsage: 0,
+        activeAlerts: 0
+      });
+      setBudgetStatus([{
+        userId: 1,
+        memberName: 'You (Main User)',
+        role: 'parent',
+        monthlyBudget: 0,
+        currentSpent: 0,
+        usagePercentage: 0,
+        isOverBudget: false,
+        categories: []
+      }]);
+      setRecentAlerts([]);
+      setLiveUpdates([]);
+      setLoading(false);
+    }
+  };
 
   const getBudgetStatusColor = (percentage) => {
     if (percentage >= 100) return 'text-red-600 bg-red-100';

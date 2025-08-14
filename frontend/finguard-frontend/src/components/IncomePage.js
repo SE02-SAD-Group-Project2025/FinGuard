@@ -5,9 +5,12 @@ import RecentIncomeSources from './RecentIncomeSources';
 import Navbar from './Navbar';
 import AnimatedPage from './AnimatedPage';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../hooks/useSubscription';
+import PredictiveCashFlow from './PredictiveCashFlow';
 
 const IncomePage = () => {
   const { isDarkMode } = useTheme();
+  const { isPremium } = useSubscription();
   const [isIncomePopupOpen, setIsIncomePopupOpen] = useState(false);
   const [incomes, setIncomes] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -16,6 +19,10 @@ const IncomePage = () => {
   const [success, setSuccess] = useState('');
   const [monthlySummary, setMonthlySummary] = useState({ income: 0, expenses: 0, balance: 0 });
 
+  // Month/Year Selection State - Always default to current date
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+
   const [formData, setFormData] = useState({
     category: '',
     amount: '',
@@ -23,10 +30,9 @@ const IncomePage = () => {
     description: '',
   });
 
-  // Get current month/year
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear();
+  // Use selected month/year for API calls
+  const currentMonth = selectedMonth;
+  const currentYear = selectedYear;
 
   // Get predefined income categories as fallback
   const getPredefinedIncomeCategories = () => {
@@ -86,8 +92,10 @@ const IncomePage = () => {
 
     try {
       // Fetch transactions (incomes)
-      const transactionsData = await apiCall('/api/transactions');
-      if (transactionsData) {
+      const transactionsResponse = await apiCall(`/api/transactions?month=${currentMonth}&year=${currentYear}`);
+      if (transactionsResponse) {
+        // Handle new API response format
+        const transactionsData = transactionsResponse.transactions || transactionsResponse;
         const incomeData = transactionsData
           .filter(tx => tx.type === 'income')
           .map(income => ({
@@ -115,10 +123,10 @@ const IncomePage = () => {
     }
   };
 
-  // Load data on component mount
+  // Load data on component mount and when month/year changes
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   // Clear messages
   useEffect(() => {
@@ -222,6 +230,30 @@ const IncomePage = () => {
 
       if (response) {
         setSuccess('Income added successfully!');
+        
+        // Update challenge progress based on this income
+        try {
+          const token = localStorage.getItem('finguard-token');
+          if (token) {
+            await fetch('http://localhost:5000/api/challenges/update-progress', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                transactionType: 'income',
+                amount: parseFloat(formData.amount),
+                category: formData.category,
+                date: formData.date
+              })
+            });
+          }
+        } catch (error) {
+          console.error('Error updating challenge progress:', error);
+          // Don't fail the income submission if challenge update fails
+        }
+
         closeIncomePopup();
         await fetchAllData(); // Refresh all data
       }
@@ -299,7 +331,7 @@ const IncomePage = () => {
         <MessageAlert message={success} type="success" />
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4">
           <div>
             <h1 className={`text-3xl font-bold ${
               isDarkMode ? 'text-white' : 'text-gray-900'
@@ -307,6 +339,60 @@ const IncomePage = () => {
             <p className={`mt-1 ${
               isDarkMode ? 'text-gray-300' : 'text-gray-600'
             }`}>Track your income sources and monitor earnings</p>
+            <p className={`text-sm ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} • 
+              Categories: {categories.length} sources
+            </p>
+          </div>
+          
+          {/* Month/Year Selector */}
+          <div className="flex items-center space-x-3">
+            <label className={`text-sm font-medium ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              View Data For:
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className={`px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                isDarkMode 
+                  ? 'bg-gray-700 border-gray-600 text-white' 
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - i;
+                return (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 mb-6">
+          <div className="flex gap-3">
             <p className={`text-sm ${
               isDarkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
@@ -625,6 +711,13 @@ const IncomePage = () => {
             </div>
           </div>
         </div>
+      
+        {/* AI Predictive Cash Flow - Admin and Premium Users Only */}
+        {isPremium() && (
+          <div className="mt-8">
+            <PredictiveCashFlow />
+          </div>
+        )}
       </div>
     </AnimatedPage>
   );

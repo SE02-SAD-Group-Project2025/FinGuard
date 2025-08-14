@@ -43,21 +43,80 @@ const AutoCategorizationManager = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       // Get category rules
-      const rules = Array.from(autoCategorizationService.merchantPatterns.entries())
-        .map(([merchant, data]) => ({ merchant, ...data }));
-      setCategoryRules(rules);
-      
+      try {
+        const rulesResponse = await fetch('http://localhost:5000/api/auto-categorization/rules', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (rulesResponse.ok) {
+          const rulesData = await rulesResponse.json();
+          setCategoryRules((rulesData.rules || []).map(rule => ({
+            id: rule.id,
+            merchant: rule.merchant_name,
+            category: rule.category,
+            confidence: rule.confidence_score,
+            transactionCount: rule.transaction_count
+          })));
+        } else {
+          setCategoryRules([]);
+        }
+      } catch (error) {
+        setCategoryRules([]);
+      }
+
       // Get recurring transactions
-      const recurring = autoCategorizationService.getRecurringTransactions();
-      setRecurringTransactions(recurring);
-      
+      try {
+        const recurringResponse = await fetch('http://localhost:5000/api/auto-categorization/recurring', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (recurringResponse.ok) {
+          const recurringData = await recurringResponse.json();
+          setRecurringTransactions(recurringData.recurringTransactions || []);
+        } else {
+          setRecurringTransactions([]);
+        }
+      } catch (error) {
+        setRecurringTransactions([]);
+      }
+
       // Get stats
-      const statistics = autoCategorizationService.getCategorizationStats();
-      setStats(statistics);
+      try {
+        const statsResponse = await fetch('http://localhost:5000/api/auto-categorization/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData.stats || {});
+        } else {
+          setStats({});
+        }
+      } catch (error) {
+        setStats({});
+      }
       
     } catch (error) {
-      console.error('Error loading auto-categorization data:', error);
+      // Silently handle errors to avoid console spam
+      setCategoryRules([]);
+      setRecurringTransactions([]);
+      setStats({});
     } finally {
       setLoading(false);
     }
@@ -69,25 +128,105 @@ const AutoCategorizationManager = () => {
   };
 
   // Add new category rule
-  const addCategoryRule = () => {
+  const addCategoryRule = async () => {
     if (!newRule.merchant || !newRule.category) return;
     
-    autoCategorizationService.updateCategoryRule(newRule.merchant, newRule.category);
-    setNewRule({ merchant: '', category: '' });
-    loadData();
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/auto-categorization/rules', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          merchantName: newRule.merchant,
+          category: newRule.category
+        })
+      });
+
+      if (response.ok) {
+        setNewRule({ merchant: '', category: '' });
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Error adding category rule:', error);
+    }
   };
 
   // Update existing rule
-  const updateRule = (merchant, category) => {
-    autoCategorizationService.updateCategoryRule(merchant, category);
-    setEditingRule(null);
-    loadData();
+  const updateRule = async (ruleId, merchant, category) => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/auto-categorization/rules', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          merchantName: merchant,
+          category: category
+        })
+      });
+
+      if (response.ok) {
+        setEditingRule(null);
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Error updating rule:', error);
+    }
   };
 
   // Delete rule
-  const deleteRule = (merchant) => {
-    autoCategorizationService.deleteCategoryRule(merchant);
-    loadData();
+  const deleteRule = async (ruleId) => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) return;
+
+      const response = await fetch(`http://localhost:5000/api/auto-categorization/rules/${ruleId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Error deleting rule:', error);
+    }
+  };
+
+  // Auto-categorize transactions
+  const runAutoCategorization = async () => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/auto-categorization/categorize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Auto-categorization completed:', result);
+        await loadData(); // Refresh stats
+      }
+    } catch (error) {
+      console.error('Error running auto-categorization:', error);
+    }
   };
 
   // Filter rules based on search and category
@@ -117,9 +256,9 @@ const AutoCategorizationManager = () => {
 
   // Format currency
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-LK', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'LKR'
     }).format(Math.abs(amount));
   };
 
@@ -187,7 +326,7 @@ const AutoCategorizationManager = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Category Rules</p>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.totalRules || 0}</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.rulesCount || 0}</p>
                 </div>
                 <Settings className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
@@ -196,8 +335,8 @@ const AutoCategorizationManager = () => {
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">Recurring Detected</p>
-                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.recurringTransactions || 0}</p>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400">Recently Categorized</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.recentlyCategorized || 0}</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
@@ -206,11 +345,34 @@ const AutoCategorizationManager = () => {
             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Pattern Categories</p>
-                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.categoryPatterns || 0}</p>
+                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Categorization Rate</p>
+                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{Math.round(stats.categorizationRate || 0)}%</p>
                 </div>
                 <Brain className="w-8 h-8 text-purple-600 dark:text-purple-400" />
               </div>
+            </div>
+          </div>
+
+          {/* Auto-Categorize Actions */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Auto-Categorization</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Apply your rules to categorize {stats.totalTransactions - stats.categorizedTransactions || 0} uncategorized transactions
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Current rate: {stats.categorizationRate || 0}% of transactions categorized
+                </p>
+              </div>
+              <button
+                onClick={runAutoCategorization}
+                disabled={loading || (stats.rulesCount || 0) === 0}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
+              >
+                <Brain className="w-5 h-5" />
+                <span>Run Auto-Categorization</span>
+              </button>
             </div>
           </div>
 
@@ -319,7 +481,7 @@ const AutoCategorizationManager = () => {
               filteredRules.map((rule) => (
                 <div key={rule.merchant} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="flex-1">
-                    {editingRule === rule.merchant ? (
+                    {editingRule === rule.id ? (
                       <div className="flex items-center space-x-2">
                         <input
                           type="text"
@@ -329,7 +491,7 @@ const AutoCategorizationManager = () => {
                         />
                         <select
                           defaultValue={rule.category}
-                          onChange={(e) => updateRule(rule.merchant, e.target.value)}
+                          onChange={(e) => updateRule(rule.id, rule.merchant, e.target.value)}
                           className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         >
                           {categories.map(category => (
@@ -347,20 +509,20 @@ const AutoCategorizationManager = () => {
                           <span className={getConfidenceColor(rule.confidence)}>
                             {Math.round(rule.confidence * 100)}% confidence
                           </span>
-                          <span>{rule.count || 1} transactions</span>
+                          <span>{rule.transactionCount || 0} transactions</span>
                         </div>
                       </div>
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setEditingRule(editingRule === rule.merchant ? null : rule.merchant)}
+                      onClick={() => setEditingRule(editingRule === rule.id ? null : rule.id)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deleteRule(rule.merchant)}
+                      onClick={() => deleteRule(rule.id)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                     >
                       <Trash2 className="w-4 h-4" />

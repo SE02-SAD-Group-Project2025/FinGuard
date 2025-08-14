@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Star, Medal, Award, Crown, Target, TrendingUp, Calendar, Users, Zap, Gift, Lock, CheckCircle, RotateCcw } from 'lucide-react';
+import { Trophy, Star, Medal, Award, Crown, Target, TrendingUp, Calendar, Users, Zap, Gift, Lock, CheckCircle, RotateCcw, Activity, PiggyBank, BarChart3 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const FamilyAchievementBadges = () => {
@@ -18,270 +18,175 @@ const FamilyAchievementBadges = () => {
     setLoading(true);
     
     try {
-      // Make actual API call
       const token = localStorage.getItem('finguard-token');
-      if (token) {
-        try {
-          const response = await fetch('/api/family/achievements', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setAchievements(data.achievements || []);
-            setFamilyMembers(data.members || []);
-            return;
-          }
-        } catch (apiError) {
-          console.error('API call failed, using fallback data:', apiError);
-        }
+      if (!token) {
+        setLoading(false);
+        return;
       }
-      
-      // Fallback to mock data if API fails
-      
-      const mockFamilyMembers = [
-        {
-          id: 1,
-          name: 'You (Parent)',
-          role: 'parent',
-          level: 15,
-          totalPoints: 2450,
-          badgesEarned: 12
-        },
-        {
-          id: 2,
-          name: 'Sarah (Spouse)',
-          role: 'parent',
-          level: 12,
-          totalPoints: 1890,
-          badgesEarned: 9
-        },
-        {
-          id: 3,
-          name: 'Alice (Daughter)',
-          role: 'child',
-          level: 8,
-          totalPoints: 1120,
-          badgesEarned: 7
-        },
-        {
-          id: 4,
-          name: 'Bob (Son)',
-          role: 'child',
-          level: 6,
-          totalPoints: 680,
-          badgesEarned: 4
-        }
-      ];
 
-      const mockAchievements = [
-        // Earned Badges
-        {
-          id: 1,
-          name: 'Budget Master',
-          description: 'Stay within budget for 3 consecutive months',
-          icon: Target,
-          category: 'budgeting',
-          difficulty: 'hard',
-          points: 500,
-          earnedBy: [1, 2],
-          earnedDate: {
-            1: new Date(2025, 6, 15),
-            2: new Date(2025, 6, 20)
-          },
-          requirements: 'Stay within monthly budget for 3 months',
-          progress: {
-            1: { current: 3, target: 3, completed: true },
-            2: { current: 3, target: 3, completed: true },
-            3: { current: 2, target: 3, completed: false },
-            4: { current: 1, target: 3, completed: false }
-          }
-        },
-        {
-          id: 2,
-          name: 'Savings Star',
-          description: 'Save Rs. 50,000 in a single month',
-          icon: Star,
-          category: 'savings',
-          difficulty: 'medium',
-          points: 300,
-          earnedBy: [1, 3],
-          earnedDate: {
-            1: new Date(2025, 7, 1),
-            3: new Date(2025, 7, 10)
-          },
-          requirements: 'Accumulate Rs. 50,000 in savings',
-          progress: {
-            1: { current: 75000, target: 50000, completed: true },
-            2: { current: 35000, target: 50000, completed: false },
-            3: { current: 52000, target: 50000, completed: true },
-            4: { current: 25000, target: 50000, completed: false }
-          }
-        },
-        {
-          id: 3,
-          name: 'Expense Tracker',
-          description: 'Log expenses for 30 consecutive days',
-          icon: CheckCircle,
-          category: 'tracking',
-          difficulty: 'easy',
-          points: 150,
-          earnedBy: [1, 2, 3, 4],
-          earnedDate: {
-            1: new Date(2025, 5, 30),
-            2: new Date(2025, 6, 5),
-            3: new Date(2025, 6, 12),
-            4: new Date(2025, 6, 18)
-          },
-          requirements: 'Track expenses daily for 30 days',
-          progress: {
-            1: { current: 30, target: 30, completed: true },
-            2: { current: 30, target: 30, completed: true },
-            3: { current: 30, target: 30, completed: true },
-            4: { current: 30, target: 30, completed: true }
-          }
-        },
-        {
-          id: 4,
-          name: 'Goal Achiever',
-          description: 'Complete 5 financial goals',
-          icon: Trophy,
-          category: 'goals',
-          difficulty: 'hard',
-          points: 400,
-          earnedBy: [1],
-          earnedDate: {
-            1: new Date(2025, 7, 5)
-          },
-          requirements: 'Successfully complete 5 financial goals',
-          progress: {
-            1: { current: 5, target: 5, completed: true },
-            2: { current: 3, target: 5, completed: false },
-            3: { current: 2, target: 5, completed: false },
-            4: { current: 1, target: 5, completed: false }
-          }
-        },
-        {
-          id: 5,
-          name: 'Smart Spender',
-          description: 'Use auto-categorization for 100 transactions',
-          icon: Zap,
-          category: 'technology',
-          difficulty: 'medium',
-          points: 250,
-          earnedBy: [1, 2, 3],
-          earnedDate: {
-            1: new Date(2025, 6, 25),
-            2: new Date(2025, 7, 2),
-            3: new Date(2025, 7, 8)
-          },
-          requirements: 'Use smart categorization 100 times',
-          progress: {
-            1: { current: 156, target: 100, completed: true },
-            2: { current: 123, target: 100, completed: true },
-            3: { current: 104, target: 100, completed: true },
-            4: { current: 67, target: 100, completed: false }
-          }
-        },
-        // Available Badges
-        {
-          id: 6,
-          name: 'Family Planner',
-          description: 'Attend 5 family financial meetings',
-          icon: Users,
-          category: 'collaboration',
-          difficulty: 'medium',
-          points: 200,
-          earnedBy: [],
-          earnedDate: {},
-          requirements: 'Participate in family meetings',
-          progress: {
-            1: { current: 3, target: 5, completed: false },
-            2: { current: 4, target: 5, completed: false },
-            3: { current: 2, target: 5, completed: false },
-            4: { current: 1, target: 5, completed: false }
-          }
-        },
-        {
-          id: 7,
-          name: 'Investment Guru',
-          description: 'Maintain positive investment returns for 6 months',
-          icon: TrendingUp,
-          category: 'investments',
-          difficulty: 'legendary',
-          points: 1000,
-          earnedBy: [],
-          earnedDate: {},
-          requirements: 'Positive investment performance',
-          progress: {
-            1: { current: 2, target: 6, completed: false },
-            2: { current: 1, target: 6, completed: false },
-            3: { current: 0, target: 6, completed: false },
-            4: { current: 0, target: 6, completed: false }
-          }
-        },
-        {
-          id: 8,
-          name: 'Debt Destroyer',
-          description: 'Pay off a major debt completely',
-          icon: Award,
-          category: 'debt',
-          difficulty: 'hard',
-          points: 600,
-          earnedBy: [],
-          earnedDate: {},
-          requirements: 'Eliminate a significant debt',
-          progress: {
-            1: { current: 85, target: 100, completed: false },
-            2: { current: 45, target: 100, completed: false },
-            3: { current: 0, target: 100, completed: false },
-            4: { current: 0, target: 100, completed: false }
-          }
-        },
-        {
-          id: 9,
-          name: 'Challenge Champion',
-          description: 'Complete 10 spending challenges',
-          icon: Medal,
-          category: 'challenges',
-          difficulty: 'medium',
-          points: 350,
-          earnedBy: [],
-          earnedDate: {},
-          requirements: 'Win financial challenges',
-          progress: {
-            1: { current: 7, target: 10, completed: false },
-            2: { current: 5, target: 10, completed: false },
-            3: { current: 8, target: 10, completed: false },
-            4: { current: 3, target: 10, completed: false }
-          }
-        },
-        {
-          id: 10,
-          name: 'Emergency Fund Builder',
-          description: 'Build an emergency fund worth 6 months expenses',
-          icon: Crown,
-          category: 'emergency',
-          difficulty: 'legendary',
-          points: 800,
-          earnedBy: [],
-          earnedDate: {},
-          requirements: 'Save 6 months of expenses',
-          progress: {
-            1: { current: 4.2, target: 6, completed: false },
-            2: { current: 2.8, target: 6, completed: false },
-            3: { current: 1.5, target: 6, completed: false },
-            4: { current: 0.8, target: 6, completed: false }
-          }
-        }
-      ];
+      // Fetch real user data and generate achievements based on actual financial behavior
+      const [transactionsRes, budgetsRes, summaryRes, familyRes] = await Promise.all([
+        fetch('http://localhost:5000/api/transactions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/budgets/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/family/members', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => ({ ok: false })) // Family might not exist
+      ]);
+
+      const transactions = transactionsRes.ok ? await transactionsRes.json() : [];
+      const budgets = budgetsRes.ok ? await budgetsRes.json() : [];
+      const summary = summaryRes.ok ? await summaryRes.json() : { income: 0, expenses: 0, balance: 0 };
+      const familyData = familyRes.ok ? await familyRes.json() : { members: [] };
+
+      // Generate real achievements based on user's actual financial data
+      const realAchievements = generateUserAchievements(transactions, budgets, summary);
       
-      setFamilyMembers(mockFamilyMembers);
-      setAchievements(mockAchievements);
+      // Get current user info for family members
+      const currentUser = {
+        id: 1,
+        name: 'You (Main User)',
+        role: 'parent',
+        level: calculateUserLevel(transactions.length, summary.balance),
+        totalPoints: calculateUserPoints(realAchievements),
+        badgesEarned: realAchievements.filter(a => a.earned).length
+      };
+
+      // Add family members if they exist
+      const realMembers = familyData.members.length > 0 ? 
+        [currentUser, ...familyData.members] : [currentUser];
+
+      setAchievements(realAchievements);
+      setFamilyMembers(realMembers);
+      
     } catch (error) {
       console.error('Error loading achievement data:', error);
+      // Set basic user data even on error
+      const basicUser = {
+        id: 1,
+        name: 'You (Main User)', 
+        role: 'parent',
+        level: 1,
+        totalPoints: 0,
+        badgesEarned: 0
+      };
+      setFamilyMembers([basicUser]);
+      setAchievements([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate achievements based on real user financial data
+  const generateUserAchievements = (transactions, budgets, summary) => {
+    const achievements = [];
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    const savingsRate = summary.income > 0 ? (summary.balance / summary.income) * 100 : 0;
+    
+    // Budget Master Achievement - Based on real budget adherence
+    const budgetAdherence = budgets.length > 0 ? 
+      budgets.filter(b => (parseFloat(b.spent) || 0) <= (parseFloat(b.budget_limit) || 0)).length / budgets.length * 100 : 0;
+    
+    achievements.push({
+      id: 1,
+      name: 'Budget Master',
+      description: 'Stay within all budgets for current month',
+      icon: Target,
+      category: 'budgeting',
+      difficulty: budgetAdherence >= 100 ? 'hard' : 'medium',
+      points: 500,
+      earned: budgetAdherence >= 100,
+      earnedDate: budgetAdherence >= 100 ? new Date() : null,
+      progress: budgetAdherence,
+      requirements: 'Keep all categories within budget limits'
+    });
+
+    // Transaction Tracker Achievement - Based on real transaction count
+    achievements.push({
+      id: 2,
+      name: 'Transaction Tracker',
+      description: 'Record 50+ transactions',
+      icon: Activity,
+      category: 'tracking',
+      difficulty: 'easy',
+      points: 200,
+      earned: transactions.length >= 50,
+      earnedDate: transactions.length >= 50 ? new Date() : null,
+      progress: Math.min((transactions.length / 50) * 100, 100),
+      requirements: 'Add 50 transactions to your account'
+    });
+
+    // Savings Champion Achievement - Based on real savings rate
+    achievements.push({
+      id: 3,
+      name: 'Savings Champion',
+      description: 'Maintain 20%+ savings rate',
+      icon: PiggyBank,
+      category: 'savings',
+      difficulty: 'hard',
+      points: 600,
+      earned: savingsRate >= 20,
+      earnedDate: savingsRate >= 20 ? new Date() : null,
+      progress: Math.min(savingsRate * 5, 100), // Convert to percentage
+      requirements: 'Save at least 20% of your income'
+    });
+
+    // Category Diversification - Based on real spending categories
+    const uniqueCategories = [...new Set(expenseTransactions.map(t => t.category))].length;
+    achievements.push({
+      id: 4,
+      name: 'Category Master',
+      description: 'Use 10+ different expense categories',
+      icon: BarChart3,
+      category: 'tracking',
+      difficulty: 'medium',
+      points: 300,
+      earned: uniqueCategories >= 10,
+      earnedDate: uniqueCategories >= 10 ? new Date() : null,
+      progress: Math.min((uniqueCategories / 10) * 100, 100),
+      requirements: 'Track expenses across 10+ categories'
+    });
+
+    // Regular User Achievement - Based on account age/activity
+    const daysSinceFirstTransaction = transactions.length > 0 ? 
+      Math.floor((new Date() - new Date(transactions[0].date)) / (1000 * 60 * 60 * 24)) : 0;
+    
+    achievements.push({
+      id: 5,
+      name: 'Consistency King',
+      description: 'Use FinGuard for 30+ days',
+      icon: Calendar,
+      category: 'engagement',
+      difficulty: 'easy',
+      points: 250,
+      earned: daysSinceFirstTransaction >= 30,
+      earnedDate: daysSinceFirstTransaction >= 30 ? new Date() : null,
+      progress: Math.min((daysSinceFirstTransaction / 30) * 100, 100),
+      requirements: 'Stay active for 30 consecutive days'
+    });
+
+    return achievements;
+  };
+
+  // Calculate user level based on real activity
+  const calculateUserLevel = (transactionCount, balance) => {
+    let level = 1;
+    level += Math.floor(transactionCount / 10); // +1 level per 10 transactions
+    level += Math.floor(balance / 50000); // +1 level per Rs. 50,000 balance
+    return Math.min(level, 50); // Max level 50
+  };
+
+  // Calculate user points based on earned achievements
+  const calculateUserPoints = (achievements) => {
+    return achievements
+      .filter(a => a.earned)
+      .reduce((total, a) => total + (a.points || 0), 0);
   };
 
   const difficultyColors = {
@@ -310,10 +215,9 @@ const FamilyAchievementBadges = () => {
 
   const filteredAchievements = achievements.filter(achievement => {
     const memberFilter = selectedMember === 'all' ? true : 
-      (activeTab === 'earned' ? achievement.earnedBy.includes(parseInt(selectedMember)) :
-       achievement.progress[selectedMember] !== undefined);
+      (activeTab === 'earned' ? achievement.earned : true);
     
-    const statusFilter = activeTab === 'earned' ? achievement.earnedBy.length > 0 : achievement.earnedBy.length === 0;
+    const statusFilter = activeTab === 'earned' ? achievement.earned : !achievement.earned;
     
     return memberFilter && statusFilter;
   });
@@ -418,8 +322,8 @@ const FamilyAchievementBadges = () => {
       {/* Tabs */}
       <div className="flex space-x-2 mb-6 overflow-x-auto">
         {[
-          { id: 'earned', label: 'Earned Badges', count: achievements.filter(a => a.earnedBy.length > 0).length },
-          { id: 'available', label: 'Available Badges', count: achievements.filter(a => a.earnedBy.length === 0).length }
+          { id: 'earned', label: 'Earned Badges', count: achievements.filter(a => a.earned).length },
+          { id: 'available', label: 'Available Badges', count: achievements.filter(a => !a.earned).length }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -450,8 +354,8 @@ const FamilyAchievementBadges = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredAchievements.map((achievement) => {
           const BadgeIcon = achievement.icon;
-          const isEarned = achievement.earnedBy.length > 0;
-          const memberProgress = selectedMember === 'all' ? null : achievement.progress[selectedMember];
+          const isEarned = achievement.earned;
+          const memberProgress = selectedMember === 'all' ? null : { current: achievement.progress, target: 100, completed: achievement.earned };
           
           return (
             <div key={achievement.id} className={`p-5 rounded-lg border transition-all duration-300 hover:shadow-lg ${
@@ -543,23 +447,17 @@ const FamilyAchievementBadges = () => {
               )}
               
               {/* Earned by members */}
-              {isEarned && achievement.earnedBy.length > 0 && (
+              {isEarned && (
                 <div>
                   <p className={`text-xs font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Earned by:
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {achievement.earnedBy.map(memberId => {
-                      const member = familyMembers.find(m => m.id === memberId);
-                      const earnedDate = achievement.earnedDate[memberId];
-                      return (
-                        <span key={memberId} className={`text-xs px-2 py-1 rounded-full ${
-                          isDarkMode ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-800'
-                        }`} title={earnedDate ? earnedDate.toLocaleDateString() : ''}>
-                          {member?.name || 'Unknown'}
-                        </span>
-                      );
-                    })}
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      isDarkMode ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-800'
+                    }`} title={achievement.earnedDate ? achievement.earnedDate.toLocaleDateString() : ''}>
+                      You (Main User)
+                    </span>
                   </div>
                 </div>
               )}

@@ -29,95 +29,65 @@ const CustomBudgetPeriods = () => {
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockBudgetPeriods = [
-        {
-          id: 1,
-          name: 'Weekly Groceries',
-          type: 'weekly',
-          amount: 8000,
-          spent: 6200,
-          startDate: new Date(2025, 7, 5),
-          endDate: new Date(2025, 7, 11),
-          description: 'Weekly grocery shopping budget',
-          categories: ['Food & Dining'],
-          autoRenew: true,
-          isActive: true,
-          daysRemaining: 3,
-          percentageUsed: 77.5,
-          isOverBudget: false
-        },
-        {
-          id: 2,
-          name: 'Bi-weekly Entertainment',
-          type: 'bi-weekly',
-          amount: 5000,
-          spent: 5800,
-          startDate: new Date(2025, 7, 1),
-          endDate: new Date(2025, 7, 14),
-          description: 'Entertainment and leisure activities',
-          categories: ['Entertainment', 'Shopping'],
-          autoRenew: true,
-          isActive: true,
-          daysRemaining: 6,
-          percentageUsed: 116,
-          isOverBudget: true
-        },
-        {
-          id: 3,
-          name: 'Weekly Fuel Budget',
-          type: 'weekly',
-          amount: 3000,
-          spent: 2100,
-          startDate: new Date(2025, 7, 5),
-          endDate: new Date(2025, 7, 11),
-          description: 'Weekly fuel and transportation',
-          categories: ['Transportation'],
-          autoRenew: true,
-          isActive: true,
-          daysRemaining: 3,
-          percentageUsed: 70,
-          isOverBudget: false
-        },
-        {
-          id: 4,
-          name: 'Monthly Utilities',
-          type: 'monthly',
-          amount: 15000,
-          spent: 12500,
-          startDate: new Date(2025, 7, 1),
-          endDate: new Date(2025, 7, 31),
-          description: 'Monthly utility bills',
-          categories: ['Bills & Utilities'],
-          autoRenew: true,
-          isActive: true,
-          daysRemaining: 23,
-          percentageUsed: 83.3,
-          isOverBudget: false
-        },
-        {
-          id: 5,
-          name: 'Bi-weekly Dining Out',
-          type: 'bi-weekly',
-          amount: 4000,
-          spent: 4000,
-          startDate: new Date(2025, 6, 20),
-          endDate: new Date(2025, 7, 2),
-          description: 'Restaurant and dining expenses',
-          categories: ['Food & Dining'],
-          autoRenew: false,
-          isActive: false,
-          daysRemaining: 0,
-          percentageUsed: 100,
-          isOverBudget: false
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/custom-budgets', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      ];
-      
-      setBudgetPeriods(mockBudgetPeriods);
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Custom budget periods loaded:', data);
+        
+        // Transform backend data to match frontend format
+        const transformedPeriods = data.periods.map(period => {
+          const startDate = new Date(period.startDate);
+          const endDate = new Date(period.endDate);
+          const now = new Date();
+          
+          // Calculate period type based on duration
+          const durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+          let type = 'custom';
+          if (durationDays <= 1) type = 'daily';
+          else if (durationDays <= 7) type = 'weekly';
+          else if (durationDays <= 14) type = 'bi-weekly';
+          else if (durationDays <= 31) type = 'monthly';
+          else if (durationDays <= 92) type = 'quarterly';
+          
+          return {
+            id: period.id,
+            name: period.name,
+            type: type,
+            amount: period.totalBudget,
+            spent: period.totalSpent,
+            startDate: startDate,
+            endDate: endDate,
+            description: period.description || '',
+            categories: Array.isArray(period.categories) ? period.categories : Object.keys(period.categories || {}),
+            autoRenew: true, // Default since backend doesn't track this yet
+            isActive: period.isActive,
+            daysRemaining: period.daysRemaining,
+            percentageUsed: period.percentageUsed,
+            isOverBudget: period.isOverBudget
+          };
+        });
+        
+        setBudgetPeriods(transformedPeriods);
+      } else {
+        console.error('Failed to load budget periods:', response.status, response.statusText);
+        // Fall back to empty array on error
+        setBudgetPeriods([]);
+      }
     } catch (error) {
       console.error('Error loading budget periods:', error);
+      setBudgetPeriods([]);
     } finally {
       setLoading(false);
     }
@@ -175,24 +145,45 @@ const CustomBudgetPeriods = () => {
     return start;
   };
 
-  const handleAddPeriod = () => {
-    const startDate = new Date(newPeriod.startDate);
-    const endDate = calculateEndDate(startDate, newPeriod.type);
-    
-    const periodData = {
-      ...newPeriod,
-      id: Date.now(),
-      amount: parseFloat(newPeriod.amount),
-      spent: 0,
-      startDate,
-      endDate,
-      daysRemaining: Math.max(0, Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24))),
-      percentageUsed: 0,
-      isOverBudget: false
-    };
-    
-    setBudgetPeriods(prev => [...prev, periodData]);
-    resetForm();
+  const handleAddPeriod = async () => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const startDate = new Date(newPeriod.startDate);
+      const endDate = calculateEndDate(startDate, newPeriod.type);
+      
+      const requestData = {
+        name: newPeriod.name,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        total_budget: parseFloat(newPeriod.amount),
+        categories: newPeriod.categories,
+        description: newPeriod.description
+      };
+
+      const response = await fetch('http://localhost:5000/api/custom-budgets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (response.ok) {
+        console.log('✅ Budget period created successfully');
+        await loadBudgetPeriods(); // Refresh the list
+        resetForm();
+      } else {
+        console.error('Failed to create budget period:', response.status);
+      }
+    } catch (error) {
+      console.error('Error creating budget period:', error);
+    }
   };
 
   const handleEditPeriod = (period) => {
@@ -210,38 +201,114 @@ const CustomBudgetPeriods = () => {
     setShowAddModal(true);
   };
 
-  const handleUpdatePeriod = () => {
-    const startDate = new Date(newPeriod.startDate);
-    const endDate = calculateEndDate(startDate, newPeriod.type);
-    
-    const updatedPeriod = {
-      ...editingPeriod,
-      ...newPeriod,
-      amount: parseFloat(newPeriod.amount),
-      startDate,
-      endDate,
-      daysRemaining: Math.max(0, Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24))),
-      percentageUsed: editingPeriod.spent / parseFloat(newPeriod.amount) * 100
-    };
-    updatedPeriod.isOverBudget = updatedPeriod.percentageUsed > 100;
-    
-    setBudgetPeriods(prev => prev.map(period => 
-      period.id === editingPeriod.id ? updatedPeriod : period
-    ));
-    
-    resetForm();
+  const handleUpdatePeriod = async () => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const startDate = new Date(newPeriod.startDate);
+      const endDate = calculateEndDate(startDate, newPeriod.type);
+      
+      const requestData = {
+        name: newPeriod.name,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        total_budget: parseFloat(newPeriod.amount),
+        categories: newPeriod.categories,
+        description: newPeriod.description,
+        status: newPeriod.isActive ? 'active' : 'inactive'
+      };
+
+      const response = await fetch(`http://localhost:5000/api/custom-budgets/${editingPeriod.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (response.ok) {
+        console.log('✅ Budget period updated successfully');
+        await loadBudgetPeriods(); // Refresh the list
+        resetForm();
+      } else {
+        console.error('Failed to update budget period:', response.status);
+      }
+    } catch (error) {
+      console.error('Error updating budget period:', error);
+    }
   };
 
-  const handleDeletePeriod = (periodId) => {
-    setBudgetPeriods(prev => prev.filter(period => period.id !== periodId));
+  const handleDeletePeriod = async (periodId) => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5000/api/custom-budgets/${periodId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        console.log('✅ Budget period deleted successfully');
+        await loadBudgetPeriods(); // Refresh the list
+      } else {
+        console.error('Failed to delete budget period:', response.status);
+      }
+    } catch (error) {
+      console.error('Error deleting budget period:', error);
+    }
   };
 
-  const togglePeriodStatus = (periodId) => {
-    setBudgetPeriods(prev => prev.map(period => 
-      period.id === periodId 
-        ? { ...period, isActive: !period.isActive }
-        : period
-    ));
+  const togglePeriodStatus = async (periodId) => {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const period = budgetPeriods.find(p => p.id === periodId);
+      if (!period) return;
+
+      const requestData = {
+        name: period.name,
+        start_date: period.startDate.toISOString().split('T')[0],
+        end_date: period.endDate.toISOString().split('T')[0],
+        total_budget: period.amount,
+        categories: period.categories,
+        description: period.description,
+        status: period.isActive ? 'inactive' : 'active'
+      };
+
+      const response = await fetch(`http://localhost:5000/api/custom-budgets/${periodId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (response.ok) {
+        console.log('✅ Budget period status updated successfully');
+        await loadBudgetPeriods(); // Refresh the list
+      } else {
+        console.error('Failed to update budget period status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error updating budget period status:', error);
+    }
   };
 
   const resetForm = () => {

@@ -82,7 +82,12 @@ const PremiumCards = () => {
   };
 
   const formatCurrency = (amount) => {
-    return `Rs.${parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const value = parseFloat(amount || 0);
+    // Hide .00 if it's a whole number, show cents otherwise
+    const options = value % 1 === 0 
+      ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
+      : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    return `Rs.${value.toLocaleString('en-US', options)}`;
   };
 
   if (loading) {

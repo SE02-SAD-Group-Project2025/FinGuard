@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FiUsers, FiDollarSign, FiTrendingUp, FiAlertTriangle, FiSettings, FiBarChart } from 'react-icons/fi';
 import axios from 'axios';
 import authStorage from '../utils/authStorage';
+import { useTheme } from '../contexts/ThemeContext';
 
 const AdminPremiumOversight = () => {
+  const { isDarkMode } = useTheme();
   const [subscriptionData, setSubscriptionData] = useState(null);
   const [financialOverview, setFinancialOverview] = useState(null);
   const [featureAdoption, setFeatureAdoption] = useState(null);
@@ -93,7 +95,7 @@ const AdminPremiumOversight = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
       </div>
     );
@@ -101,11 +103,11 @@ const AdminPremiumOversight = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="max-w-md mx-auto text-center">
           <FiAlertTriangle className="mx-auto h-16 w-16 text-red-500 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Access Denied</h3>
+          <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>{error}</p>
           <button 
             onClick={fetchAllData}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
@@ -118,11 +120,11 @@ const AdminPremiumOversight = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Premium Subscription Oversight</h1>
-          <p className="mt-2 text-gray-600">Comprehensive admin dashboard for premium user management and analytics</p>
+          <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Premium Subscription Oversight</h1>
+          <p className={`mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Comprehensive admin dashboard for premium user management and analytics</p>
         </div>
 
         {/* Tab Navigation */}
@@ -158,48 +160,48 @@ const AdminPremiumOversight = () => {
           <div className="space-y-6">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
                 <div className="flex items-center">
                   <FiUsers className="h-8 w-8 text-indigo-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Active Subscriptions</p>
-                    <p className="text-2xl font-bold text-gray-900">{subscriptionData.totalActiveSubscriptions}</p>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active Subscriptions</p>
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{subscriptionData.totalActiveSubscriptions}</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
                 <div className="flex items-center">
                   <FiDollarSign className="h-8 w-8 text-green-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900">Rs. {subscriptionData.totalMonthlyRevenue?.toLocaleString()}</p>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Monthly Revenue</p>
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Rs. {subscriptionData.totalMonthlyRevenue?.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
                 <div className="flex items-center">
                   <FiBarChart className="h-8 w-8 text-blue-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Premium Plans</p>
-                    <p className="text-2xl font-bold text-gray-900">{subscriptionData.subscriptionStats?.length}</p>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Premium Plans</p>
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{subscriptionData.subscriptionStats?.length}</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
                 <div className="flex items-center">
                   <FiTrendingUp className="h-8 w-8 text-purple-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Growth Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">+12.4%</p>
+                    <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Growth Rate</p>
+                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>+12.4%</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Subscription Plans Table */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Subscription Plans Overview</h3>
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg`}>
+              <div className={`px-6 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Subscription Plans Overview</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">

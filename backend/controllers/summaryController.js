@@ -154,7 +154,84 @@ const getFinancialHealth = async (req, res) => {
   }
 };
 
+// Get dashboard overview data
+const getDashboardOverview = async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    // Get total income
+    const totalIncomeResult = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) AS total_income
+      FROM transactions
+      WHERE user_id = $1 AND type = 'income'
+    `, [userId]);
+
+    // Get total expenses
+    const totalExpensesResult = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) AS total_expenses
+      FROM transactions
+      WHERE user_id = $1 AND type = 'expense'
+    `, [userId]);
+
+    // Get transaction count
+    const transactionCountResult = await db.query(`
+      SELECT COUNT(*) AS transaction_count
+      FROM transactions
+      WHERE user_id = $1
+    `, [userId]);
+
+    // Get budget count
+    const budgetCountResult = await db.query(`
+      SELECT COUNT(*) AS budget_count
+      FROM budgets
+      WHERE user_id = $1
+    `, [userId]);
+
+    const totalIncome = parseFloat(totalIncomeResult.rows[0].total_income) || 0;
+    const totalExpenses = parseFloat(totalExpensesResult.rows[0].total_expenses) || 0;
+    const transactionCount = parseInt(transactionCountResult.rows[0].transaction_count) || 0;
+    const budgetCount = parseInt(budgetCountResult.rows[0].budget_count) || 0;
+
+    res.json({
+      totalIncome,
+      totalExpenses,
+      balance: totalIncome - totalExpenses,
+      transactionCount,
+      budgetCount,
+      status: 'Dashboard Overview Working!'
+    });
+
+  } catch (err) {
+    console.error('❌ Dashboard overview error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch dashboard overview' });
+  }
+};
+
+// Get recent transactions
+const getRecentTransactions = async (req, res) => {
+  const userId = req.user.userId;
+  const limit = parseInt(req.query.limit) || 10;
+
+  try {
+    const result = await db.query(`
+      SELECT id, type, amount, category, description, date
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY date DESC
+      LIMIT $2
+    `, [userId, limit]);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error('❌ Recent transactions error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch recent transactions' });
+  }
+};
+
 module.exports = { 
   getMonthlySummary,
-  getFinancialHealth 
+  getFinancialHealth,
+  getDashboardOverview,
+  getRecentTransactions
 };

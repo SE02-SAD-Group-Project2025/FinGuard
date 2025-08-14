@@ -47,14 +47,23 @@ class SmartNotificationService {
     this.isInitialized = true;
     console.log('✅ Smart Notification Service initialized successfully');
     
-    // Show welcome notification
-    this.scheduleNotification({
-      type: 'WEEKLY_SUMMARY',
-      title: '🔔 Smart Notifications Active',
-      message: 'You\'ll now receive intelligent alerts about your finances!',
-      priority: 'info',
-      showImmediately: true
-    });
+    // Only show welcome notification once per session
+    const welcomeShown = sessionStorage.getItem('finguard-welcome-notification-shown');
+    if (!welcomeShown) {
+      this.scheduleNotification({
+        type: 'WEEKLY_SUMMARY',
+        title: '🔔 Smart Notifications Active',
+        message: 'You\'ll now receive intelligent alerts about your finances!',
+        priority: 'info',
+        showImmediately: true
+      });
+      sessionStorage.setItem('finguard-welcome-notification-shown', 'true');
+      
+      // Generate immediate financial insights
+      setTimeout(() => {
+        this.generateInitialInsights();
+      }, 2000);
+    }
   }
 
   // Request notification permissions
@@ -413,6 +422,108 @@ class SmartNotificationService {
     }
   }
 
+  // Generate initial insights after service activation
+  async generateInitialInsights() {
+    try {
+      const token = localStorage.getItem('finguard-token');
+      if (!token) return;
+
+      const currentDate = new Date();
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
+
+      // Fetch current financial data
+      const [summaryResponse, budgetResponse] = await Promise.all([
+        fetch(`http://localhost:5000/api/summary?month=${month}&year=${year}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`http://localhost:5000/api/budgets/summary?month=${month}&year=${year}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        const income = summaryData.income || 0;
+        const expenses = summaryData.expenses || 0;
+        const balance = summaryData.balance || 0;
+
+        // Generate insight based on current financial status
+        if (balance > 0) {
+          this.scheduleNotification({
+            type: 'SAVINGS_STREAK',
+            title: '💰 Positive Balance!',
+            message: `Great job! You have Rs.${balance.toLocaleString()} remaining this month`,
+            priority: 'positive',
+            showImmediately: false
+          });
+        } else if (balance < 0) {
+          this.scheduleNotification({
+            type: 'BUDGET_WARNING',
+            title: '⚠️ Budget Alert',
+            message: `You're Rs.${Math.abs(balance).toLocaleString()} over budget this month`,
+            priority: 'high',
+            showImmediately: false,
+            actions: [
+              { label: 'Review Expenses', action: 'open-expense-page' },
+              { label: 'Check Budget', action: 'open-budget-page' }
+            ]
+          });
+        }
+      }
+
+      if (budgetResponse.ok) {
+        const budgetData = await budgetResponse.json();
+        
+        // Check for budget alerts
+        const overBudgetCategories = budgetData.filter(item => item.status === 'Over Budget');
+        const nearLimitCategories = budgetData.filter(item => {
+          const percent = (item.spent / item.budget_limit) * 100;
+          return percent >= 80 && percent < 100;
+        });
+
+        if (overBudgetCategories.length > 0) {
+          this.scheduleNotification({
+            type: 'BUDGET_EXCEEDED',
+            title: '🚨 Budget Exceeded',
+            message: `${overBudgetCategories.length} categories are over budget: ${overBudgetCategories.map(c => c.category).join(', ')}`,
+            priority: 'high',
+            showImmediately: false,
+            actions: [
+              { label: 'View Details', action: 'open-budget-page' }
+            ]
+          });
+        } else if (nearLimitCategories.length > 0) {
+          this.scheduleNotification({
+            type: 'BUDGET_WARNING',
+            title: '⚠️ Near Budget Limit',
+            message: `${nearLimitCategories.length} categories are near budget limits`,
+            priority: 'medium',
+            showImmediately: false
+          });
+        }
+      }
+
+      // Add helpful tip based on day of week
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek === 1) { // Monday
+        this.scheduleNotification({
+          type: 'WEEKLY_SUMMARY',
+          title: '📊 Weekly Tip',
+          message: 'New week, fresh start! Review your budget goals for this week',
+          priority: 'low',
+          showImmediately: false,
+          actions: [
+            { label: 'View Budget', action: 'open-budget-page' }
+          ]
+        });
+      }
+
+    } catch (error) {
+      console.error('Error generating initial insights:', error);
+    }
+  }
+
   // Generate weekly summary
   async checkWeeklySummary() {
     const today = new Date();
@@ -499,11 +610,26 @@ class SmartNotificationService {
 
   // Schedule a notification
   scheduleNotification(notificationData) {
+    // Create unique identifier for duplicate prevention
+    const uniqueId = this.generateNotificationId(notificationData);
+    
+    // Check if we already have this notification (not dismissed)
+    const existingNotification = this.notifications.find(n => 
+      n.uniqueId === uniqueId && !n.dismissed
+    );
+    
+    if (existingNotification) {
+      console.log('Duplicate notification prevented:', notificationData.title);
+      return existingNotification; // Don't create duplicate
+    }
+
     const notification = {
       id: Date.now() + Math.random(),
+      uniqueId: uniqueId,
       timestamp: new Date().toISOString(),
       read: false,
       dismissed: false,
+      showInPanel: true, // Always show in notification panel
       ...notificationData,
       config: this.notificationTypes[notificationData.type] || this.notificationTypes.WEEKLY_SUMMARY
     };
@@ -516,7 +642,7 @@ class SmartNotificationService {
     this.notifications.unshift(notification);
     this.saveNotificationHistory();
 
-    // Show immediately if requested or critical
+    // Show popup only if requested, critical, or unread
     if (notification.showImmediately || notification.priority === 'critical') {
       this.displayNotification(notification);
     }
@@ -524,10 +650,28 @@ class SmartNotificationService {
     // Emit event for UI updates
     this.emit('notification-added', notification);
     
-    // Show browser notification if enabled
+    // Show browser notification if enabled (only for new notifications)
     this.showBrowserNotification(notification);
 
     return notification;
+  }
+
+  // Generate unique ID for notifications to prevent duplicates
+  generateNotificationId(notificationData) {
+    const today = new Date().toDateString(); // Same day
+    const baseId = `${notificationData.type}_${notificationData.title}_${today}`;
+    
+    // For budget-related notifications, include category
+    if (notificationData.category) {
+      return `${baseId}_${notificationData.category}`;
+    }
+    
+    // For bill notifications, include bill ID
+    if (notificationData.billId) {
+      return `${baseId}_${notificationData.billId}`;
+    }
+    
+    return baseId;
   }
 
   // Check if it's quiet hours
@@ -562,8 +706,21 @@ class SmartNotificationService {
     return tomorrow.toISOString();
   }
 
-  // Display notification in UI
+  // Display notification in UI (popup)
   displayNotification(notification) {
+    // Don't show popup for already read notifications
+    if (notification.read) {
+      console.log('Skipping popup for read notification:', notification.title);
+      return;
+    }
+
+    // Don't show duplicate popups for the same notification
+    const existingPopup = document.querySelector(`[data-notification-id="${notification.id}"]`);
+    if (existingPopup) {
+      console.log('Popup already shown for notification:', notification.title);
+      return;
+    }
+
     const notificationElement = document.createElement('div');
     notificationElement.className = `fixed top-4 right-4 max-w-sm bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 transform transition-all duration-300 translate-x-full`;
     notificationElement.setAttribute('data-notification-id', notification.id);
@@ -658,10 +815,13 @@ class SmartNotificationService {
         }));
         break;
       case 'edit-budget':
-        // Would open budget editing interface
-        window.dispatchEvent(new CustomEvent('open-budget-editor', { 
-          detail: { category: notification.category } 
-        }));
+      case 'open-budget-page':
+        // Navigate to budget page
+        window.location.hash = '#/budget';
+        break;
+      case 'open-expense-page':
+        // Navigate to expense page
+        window.location.hash = '#/expense';
         break;
       case 'pay-bill':
         // Would open bill payment interface
@@ -672,6 +832,10 @@ class SmartNotificationService {
       case 'create-goal':
         // Would open goal creation interface
         window.dispatchEvent(new CustomEvent('open-goal-creator'));
+        break;
+      case 'open-weekly-report':
+        // Navigate to reports page
+        window.location.hash = '#/reports';
         break;
       default:
         console.log(`Unhandled notification action: ${action}`);
@@ -719,13 +883,27 @@ class SmartNotificationService {
     return filtered.slice(0, limit);
   }
 
-  // Mark notification as read
+  // Mark notification as read (stays in panel until dismissed)
   markAsRead(notificationId) {
     const notification = this.notifications.find(n => n.id === notificationId);
-    if (notification) {
+    if (notification && !notification.read) {
       notification.read = true;
+      notification.readTimestamp = new Date().toISOString();
       this.saveNotificationHistory();
       this.emit('notification-updated', notification);
+      
+      // Remove any existing popup for this notification
+      const existingPopup = document.querySelector(`[data-notification-id="${notification.id}"]`);
+      if (existingPopup) {
+        existingPopup.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (existingPopup.parentElement) {
+            existingPopup.parentElement.removeChild(existingPopup);
+          }
+        }, 300);
+      }
+      
+      console.log('Notification marked as read:', notification.title);
     }
   }
 
@@ -736,13 +914,27 @@ class SmartNotificationService {
     this.emit('notifications-updated');
   }
 
-  // Dismiss notification
+  // Dismiss notification (removes from panel completely)
   dismissNotification(notificationId) {
     const notification = this.notifications.find(n => n.id === notificationId);
     if (notification) {
       notification.dismissed = true;
+      notification.dismissedTimestamp = new Date().toISOString();
       this.saveNotificationHistory();
       this.emit('notification-dismissed', notification);
+      
+      // Remove any existing popup for this notification
+      const existingPopup = document.querySelector(`[data-notification-id="${notification.id}"]`);
+      if (existingPopup) {
+        existingPopup.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (existingPopup.parentElement) {
+            existingPopup.parentElement.removeChild(existingPopup);
+          }
+        }, 300);
+      }
+      
+      console.log('Notification dismissed:', notification.title);
     }
   }
 

@@ -1,4 +1,5 @@
 const db = require('../db');
+const { ensureCurrentMonthBudgets, getBudgetsForMonth } = require('../services/budgetService');
 
 // Add a new monthly budget
 const addBudget = async (req, res) => {
@@ -51,11 +52,20 @@ const getBudgets = async (req, res) => {
   const { month, year } = req.query;
 
   try {
-    const result = await db.query(
-      `SELECT * FROM budgets WHERE user_id = $1 AND month = $2 AND year = $3`,
-      [userId, month, year]
+    // Use the service which handles defaults and auto-creation
+    const result = await getBudgetsForMonth(
+      userId, 
+      month ? parseInt(month) : null, 
+      year ? parseInt(year) : null
     );
-    res.json(result.rows);
+    
+    res.json({
+      budgets: result.budgets,
+      month: result.month,
+      year: result.year,
+      currentMonth: new Date().getMonth() + 1,
+      currentYear: new Date().getFullYear()
+    });
   } catch (err) {
     console.error('🔴 GET BUDGET ERROR:', err.message);
     res.status(500).json({ error: 'Failed to fetch budgets' });

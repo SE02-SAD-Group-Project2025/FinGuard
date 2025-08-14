@@ -324,13 +324,13 @@ const SpendingPatternAnalysis = () => {
           <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Spending</p>
             <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Rs. {analysisData.overview.totalSpending.toLocaleString()}
+              Rs. {(analysisData.overview?.totalSpending || 0).toLocaleString()}
             </p>
           </div>
           <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Daily Average</p>
             <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Rs. {analysisData.overview.averageDaily.toLocaleString()}
+              Rs. {(analysisData.overview?.averageDaily || 0).toLocaleString()}
             </p>
           </div>
           <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
@@ -361,7 +361,7 @@ const SpendingPatternAnalysis = () => {
           <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Spending Patterns Detected
           </h3>
-          {analysisData.patterns.map((pattern, index) => {
+          {(analysisData.patterns || []).map((pattern, index) => {
             const Icon = getPatternIcon(pattern.category);
             return (
               <div key={index} className={`p-4 rounded-lg border ${
@@ -391,7 +391,7 @@ const SpendingPatternAnalysis = () => {
                   <span className={`text-sm font-medium ${
                     pattern.amount > 0 ? 'text-red-600' : 'text-green-600'
                   }`}>
-                    {pattern.amount > 0 ? '+' : ''}Rs. {Math.abs(pattern.amount).toLocaleString()} impact
+                    {(pattern.amount || 0) > 0 ? '+' : ''}Rs. {Math.abs(pattern.amount || 0).toLocaleString()} impact
                   </span>
                   <span className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                     💡 {pattern.recommendation}
@@ -408,7 +408,7 @@ const SpendingPatternAnalysis = () => {
           <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Category-wise Analysis
           </h3>
-          {analysisData.categoryInsights.map((category, index) => {
+          {(analysisData.categoryInsights || []).map((category, index) => {
             const TrendIcon = getTrendIcon(category.trend);
             return (
               <div key={index} className={`p-4 rounded-lg border ${
@@ -425,7 +425,7 @@ const SpendingPatternAnalysis = () => {
                   </div>
                   <div className="text-right">
                     <p className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Rs. {category.amount.toLocaleString()}
+                      Rs. {(category.amount || 0).toLocaleString()}
                     </p>
                     <div className="flex items-center">
                       <TrendIcon className={`w-4 h-4 mr-1 ${getTrendColor(category.trend)}`} />
@@ -440,7 +440,7 @@ const SpendingPatternAnalysis = () => {
                     Key Insights:
                   </p>
                   <ul className={`text-sm space-y-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {category.insights.map((insight, idx) => (
+                    {(category.insights || []).map((insight, idx) => (
                       <li key={idx} className="flex items-center">
                         <ArrowRight className="w-3 h-3 mr-2" />
                         {insight}
@@ -461,13 +461,13 @@ const SpendingPatternAnalysis = () => {
               Hourly Spending Pattern
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {analysisData.temporalPatterns.hourlySpending.map((hour, index) => (
+              {(analysisData.temporalPatterns?.hourlySpending || []).map((hour, index) => (
                 <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                   <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {hour.hour}
                   </p>
                   <p className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Rs. {hour.amount.toLocaleString()}
+                    Rs. {(hour.amount || 0).toLocaleString()}
                   </p>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {hour.type}
@@ -482,16 +482,16 @@ const SpendingPatternAnalysis = () => {
               Weekly Spending Pattern
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-              {analysisData.temporalPatterns.weeklyPattern.map((day, index) => (
+              {(analysisData.temporalPatterns?.weeklyPattern || []).map((day, index) => (
                 <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                   <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {day.day}
                   </p>
                   <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Rs. {day.amount.toLocaleString()}
+                    Rs. {(day.amount || 0).toLocaleString()}
                   </p>
                   <div className="space-y-1">
-                    {day.activities.map((activity, idx) => (
+                    {(day.activities || []).map((activity, idx) => (
                       <span key={idx} className={`inline-block text-xs px-2 py-1 rounded-full mr-1 mb-1 ${
                         isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-700'
                       }`}>
@@ -511,7 +511,7 @@ const SpendingPatternAnalysis = () => {
           <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             AI-Powered Recommendations
           </h3>
-          {analysisData.aiRecommendations.map((rec, index) => (
+          {(analysisData.aiRecommendations || []).map((rec, index) => (
             <div key={index} className={`p-4 rounded-lg border ${
               isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
             }`}>
@@ -525,7 +525,7 @@ const SpendingPatternAnalysis = () => {
                 <div className="flex items-center space-x-2">
                   {rec.potentialSaving > 0 && (
                     <span className="text-sm bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 px-2 py-1 rounded-full">
-                      Save Rs. {rec.potentialSaving.toLocaleString()}
+                      Save Rs. {(rec.potentialSaving || 0).toLocaleString()}
                     </span>
                   )}
                   <span className={`text-xs px-2 py-1 rounded-full ${

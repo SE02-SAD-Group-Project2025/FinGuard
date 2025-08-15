@@ -5,12 +5,14 @@ const {
   addTransaction,
   getTransactions,
   deleteTransaction,
-  updateTransaction
+  updateTransaction,
+  getChildAllowanceStatus
 } = require('../controllers/transactionController');
 
 // Protected transaction routes
 router.post('/', authenticateToken, addTransaction);
 router.get('/', authenticateToken, getTransactions);
+router.get('/child-allowance-status', authenticateToken, getChildAllowanceStatus);
 router.put('/:id', authenticateToken, updateTransaction);
 router.delete('/:id', authenticateToken, deleteTransaction);
 

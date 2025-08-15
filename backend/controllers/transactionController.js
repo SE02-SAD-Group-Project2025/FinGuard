@@ -3,6 +3,72 @@ const { sendBudgetAlertEmail } = require('../utils/emailService');
 const { createBudgetOverflowNotification } = require('./notificationController');
 const { ensureCurrentMonthBudgets } = require('../services/budgetService');
 
+// Helper function to check child spending limits
+const checkChildSpendingLimit = async (userId, amount, type) => {
+  if (type !== 'expense') {
+    return { allowed: true }; // Income is always allowed
+  }
+
+  try {
+    // Check if user is a child in a family group
+    const childCheck = await db.query(`
+      SELECT fm.monthly_budget, fm.role, u.role as user_role
+      FROM family_members fm
+      JOIN users u ON fm.user_id = u.id
+      WHERE fm.user_id = $1 AND fm.is_active = true AND fm.role = 'child'
+    `, [userId]);
+
+    if (childCheck.rows.length === 0) {
+      return { allowed: true }; // Not a child, no limits
+    }
+
+    const childData = childCheck.rows[0];
+    const monthlyLimit = parseFloat(childData.monthly_budget || 0);
+
+    if (monthlyLimit <= 0) {
+      return { allowed: true }; // No limit set
+    }
+
+    // Calculate current month's expenses
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+
+    const spentResult = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_spent
+      FROM transactions
+      WHERE user_id = $1 AND type = 'expense'
+      AND EXTRACT(MONTH FROM date) = $2 AND EXTRACT(YEAR FROM date) = $3
+    `, [userId, month, year]);
+
+    const currentSpent = parseFloat(spentResult.rows[0].total_spent || 0);
+    const newTotal = currentSpent + parseFloat(amount);
+
+    console.log(`💰 Child spending check: Spent: ${currentSpent}, Limit: ${monthlyLimit}, New expense: ${amount}, New total: ${newTotal}`);
+
+    if (newTotal > monthlyLimit) {
+      const remaining = monthlyLimit - currentSpent;
+      return {
+        allowed: false,
+        message: `Spending limit exceeded! You have Rs.${remaining.toFixed(2)} remaining from your Rs.${monthlyLimit.toFixed(2)} monthly allowance.`,
+        currentSpent: currentSpent,
+        monthlyLimit: monthlyLimit,
+        remaining: remaining
+      };
+    }
+
+    return { 
+      allowed: true,
+      currentSpent: currentSpent,
+      monthlyLimit: monthlyLimit,
+      remaining: monthlyLimit - newTotal
+    };
+  } catch (error) {
+    console.error('❌ Error checking child spending limit:', error);
+    return { allowed: true }; // Allow transaction if check fails
+  }
+};
+
 const addTransaction = async (req, res) => {
   const userId = req.user.userId;
   const { type, category, amount, description, date } = req.body;
@@ -16,6 +82,25 @@ const addTransaction = async (req, res) => {
   }
 
   try {
+    // 🚀 NEW: Check child spending limits BEFORE saving transaction
+    console.log('🔍 Checking child spending limits...');
+    const limitCheck = await checkChildSpendingLimit(userId, amount, type);
+    
+    if (!limitCheck.allowed) {
+      console.log('🚫 Transaction rejected: Child spending limit exceeded');
+      return res.status(403).json({ 
+        error: 'Spending limit exceeded',
+        message: limitCheck.message,
+        currentSpent: limitCheck.currentSpent,
+        monthlyLimit: limitCheck.monthlyLimit,
+        remaining: limitCheck.remaining,
+        limitExceeded: true
+      });
+    }
+
+    if (limitCheck.monthlyLimit) {
+      console.log(`✅ Child spending limit check passed. Remaining: Rs.${limitCheck.remaining?.toFixed(2)}`);
+    }
     const insertResult = await db.query(
       `INSERT INTO transactions (user_id, type, category, amount, description, date)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -390,9 +475,67 @@ const updateTransaction = async (req, res) => {
   }
 };
 
+// Get child allowance status
+const getChildAllowanceStatus = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Check if user is a child in a family group
+    const childCheck = await db.query(`
+      SELECT fm.monthly_budget, fm.role, u.username, fg.group_name
+      FROM family_members fm
+      JOIN users u ON fm.user_id = u.id
+      JOIN family_groups fg ON fm.family_group_id = fg.id
+      WHERE fm.user_id = $1 AND fm.is_active = true AND fm.role = 'child'
+    `, [userId]);
+
+    if (childCheck.rows.length === 0) {
+      return res.json({ 
+        isChild: false,
+        message: 'User is not a child in any family group'
+      });
+    }
+
+    const childData = childCheck.rows[0];
+    const monthlyLimit = parseFloat(childData.monthly_budget || 0);
+
+    // Calculate current month's expenses
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+
+    const spentResult = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_spent
+      FROM transactions
+      WHERE user_id = $1 AND type = 'expense'
+      AND EXTRACT(MONTH FROM date) = $2 AND EXTRACT(YEAR FROM date) = $3
+    `, [userId, month, year]);
+
+    const currentSpent = parseFloat(spentResult.rows[0].total_spent || 0);
+    const remaining = monthlyLimit - currentSpent;
+    const utilizationPercentage = monthlyLimit > 0 ? (currentSpent / monthlyLimit) * 100 : 0;
+
+    res.json({
+      isChild: true,
+      familyGroup: childData.group_name,
+      monthlyLimit: monthlyLimit,
+      currentSpent: currentSpent,
+      remaining: remaining,
+      utilizationPercentage: utilizationPercentage.toFixed(1),
+      canSpend: remaining > 0,
+      limitExceeded: currentSpent >= monthlyLimit
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting child allowance status:', error);
+    res.status(500).json({ error: 'Failed to get allowance status' });
+  }
+};
+
 module.exports = {
   addTransaction,
   getTransactions,
   deleteTransaction,
-  updateTransaction
+  updateTransaction,
+  getChildAllowanceStatus
 };

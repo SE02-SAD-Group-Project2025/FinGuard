@@ -41,6 +41,9 @@ const ExpensePage = () => {
   const [showOverflowModal, setShowOverflowModal] = useState(false);
   const [overflowData, setOverflowData] = useState(null);
 
+  // Child allowance states
+  const [childAllowanceStatus, setChildAllowanceStatus] = useState(null);
+
   // Month/Year Selection State - Always default to current date
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -89,6 +92,18 @@ const ExpensePage = () => {
       console.error(`API Error for ${endpoint}:`, error);
       setError(`Failed to ${options.method || 'fetch'} data: ${error.message}`);
       return null;
+    }
+  };
+
+  // Fetch child allowance status
+  const fetchChildAllowanceStatus = async () => {
+    try {
+      const result = await apiCall('/api/transactions/child-allowance-status');
+      if (result) {
+        setChildAllowanceStatus(result);
+      }
+    } catch (error) {
+      console.error('Error fetching child allowance status:', error);
     }
   };
 
@@ -207,6 +222,9 @@ const ExpensePage = () => {
     } finally {
       setLoading(false);
     }
+
+    // Always fetch child allowance status (silently)
+    fetchChildAllowanceStatus();
   };
 
   // Load data on component mount and when month/year changes
@@ -671,8 +689,19 @@ const ExpensePage = () => {
         
         closeExpensePopup();
         await fetchAllData(); // Refresh all data including budget status
+      } else {
+        const errorData = await response.json();
+        
+        // Handle child spending limit exceeded (403 status)
+        if (response.status === 403 && errorData.limitExceeded) {
+          setError(`❌ ${errorData.message || 'Spending limit exceeded!'}`);
+          console.log('🚫 Child spending limit exceeded:', errorData);
+        } else {
+          setError(errorData.error || 'Failed to add expense');
+        }
       }
     } catch (error) {
+      console.error('❌ Error adding expense:', error);
       setError('Failed to add expense');
     } finally {
       setLoading(false);
@@ -860,6 +889,108 @@ const ExpensePage = () => {
             </div>
           </div>
         </div>
+
+        {/* Child Allowance Status - Only show for child users */}
+        {childAllowanceStatus && childAllowanceStatus.isChild && (
+          <div className={`p-6 rounded-lg shadow mb-6 transition-colors duration-300 border-l-4 ${
+            childAllowanceStatus.limitExceeded 
+              ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+              : childAllowanceStatus.utilizationPercentage > 80 
+                ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                : 'border-green-500 bg-green-50 dark:bg-green-900/20'
+          } ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-semibold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>
+                💰 Monthly Allowance Status
+              </h3>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                childAllowanceStatus.limitExceeded 
+                  ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200' 
+                  : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+              }`}>
+                {childAllowanceStatus.familyGroup}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Monthly Limit
+                </p>
+                <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Rs.{childAllowanceStatus.monthlyLimit?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Spent This Month
+                </p>
+                <p className={`text-xl font-bold ${
+                  childAllowanceStatus.limitExceeded ? 'text-red-600' : 'text-blue-600'
+                }`}>
+                  Rs.{childAllowanceStatus.currentSpent?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Remaining
+                </p>
+                <p className={`text-xl font-bold ${
+                  childAllowanceStatus.remaining <= 0 ? 'text-red-600' : 'text-green-600'
+                }`}>
+                  Rs.{Math.max(0, childAllowanceStatus.remaining || 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Usage: {childAllowanceStatus.utilizationPercentage}%
+                </span>
+                {childAllowanceStatus.limitExceeded && (
+                  <span className="text-sm font-medium text-red-600">
+                    ⚠️ Limit Exceeded
+                  </span>
+                )}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                <div 
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    childAllowanceStatus.limitExceeded 
+                      ? 'bg-red-500' 
+                      : childAllowanceStatus.utilizationPercentage > 80 
+                        ? 'bg-yellow-500' 
+                        : 'bg-green-500'
+                  }`}
+                  style={{ 
+                    width: `${Math.min(100, parseFloat(childAllowanceStatus.utilizationPercentage || 0))}%` 
+                  }}
+                ></div>
+              </div>
+            </div>
+            
+            {/* Warning Messages */}
+            {childAllowanceStatus.limitExceeded && (
+              <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg dark:bg-red-900/30 dark:border-red-700">
+                <p className="text-red-700 dark:text-red-300 text-sm font-medium">
+                  🚫 You have exceeded your monthly allowance limit. Please contact your parent/guardian for approval before making more purchases.
+                </p>
+              </div>
+            )}
+            
+            {!childAllowanceStatus.limitExceeded && childAllowanceStatus.utilizationPercentage > 80 && (
+              <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg dark:bg-yellow-900/30 dark:border-yellow-700">
+                <p className="text-yellow-700 dark:text-yellow-300 text-sm font-medium">
+                  ⚠️ You're approaching your spending limit. Only Rs.{childAllowanceStatus.remaining?.toLocaleString()} remaining.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Budget Alerts Section */}
         {budgetAlerts.length > 0 && (

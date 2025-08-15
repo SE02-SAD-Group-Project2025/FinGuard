@@ -9,10 +9,10 @@ const {
   getChildAllowanceStatus
 } = require('../controllers/transactionController');
 
-// Protected transaction routes
+// Protected transaction routes - specific routes first
+router.get('/child-allowance-status', authenticateToken, getChildAllowanceStatus);
 router.post('/', authenticateToken, addTransaction);
 router.get('/', authenticateToken, getTransactions);
-router.get('/child-allowance-status', authenticateToken, getChildAllowanceStatus);
 router.put('/:id', authenticateToken, updateTransaction);
 router.delete('/:id', authenticateToken, deleteTransaction);
 

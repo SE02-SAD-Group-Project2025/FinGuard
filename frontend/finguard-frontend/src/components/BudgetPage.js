@@ -154,7 +154,10 @@ const BudgetPage = () => {
     try {
       // Fetch budgets for selected month/year
       const budgetsData = await apiCall(`/api/budgets?month=${currentMonth}&year=${currentYear}`);
-      if (budgetsData) setBudgets(budgetsData);
+      if (budgetsData) {
+        const safeBudgets = Array.isArray(budgetsData) ? budgetsData : (budgetsData.budgets || []);
+        setBudgets(safeBudgets);
+      }
 
       // Fetch budget summary (spending vs limits)
       const summaryData = await apiCall(`/api/budgets/summary?month=${currentMonth}&year=${currentYear}`);
@@ -648,24 +651,24 @@ const BudgetPage = () => {
 
           {/* Existing Budgets List */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white dark:text-white">Current Budgets ({budgets.length})</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-white dark:text-white">Current Budgets ({Array.isArray(budgets) ? budgets.length : 0})</h4>
             
-            {budgets.length === 0 ? (
+            {(!Array.isArray(budgets) || budgets.length === 0) ? (
               <div className="text-center py-8 text-gray-500">
                 <Target className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No budgets set for this month</p>
                 <p className="text-sm">Add your first budget above</p>
               </div>
             ) : (
-              budgets.map((budget) => (
-                <div key={budget.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-sm transition-shadow">
+              (Array.isArray(budgets) ? budgets : []).map((budget) => (
+                <div key={budget?.id || Math.random()} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
+                      <span className="text-2xl">{getCategoryIcon(budget?.category || 'Other')}</span>
                       <div>
-                        <h5 className="font-medium text-gray-900 dark:text-white dark:text-white">{budget.category}</h5>
+                        <h5 className="font-medium text-gray-900 dark:text-white dark:text-white">{budget?.category || 'Unknown Category'}</h5>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Budget: LKR {parseFloat(budget.limit_amount).toLocaleString()}
+                          Budget: LKR {parseFloat(budget?.limit_amount || 0).toLocaleString()}
                         </p>
                         {budget.alert_triggered && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
@@ -677,7 +680,7 @@ const BudgetPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleDeleteBudget(budget.id)}
+                        onClick={() => handleDeleteBudget(budget?.id)}
                         className="text-red-600 hover:text-red-800 text-sm px-3 py-1 rounded hover:bg-red-50 transition-colors"
                       >
                         Delete

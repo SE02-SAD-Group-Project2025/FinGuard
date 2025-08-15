@@ -141,7 +141,10 @@ const AdvancedReports = () => {
   const renderFinancialOverview = () => {
     if (!data) return null;
 
-    const { summary, currentBudget, insights } = data;
+    // Safe data extraction with fallbacks
+    const summary = data.summary || { totalIncome: 0, totalExpenses: 0, netSavings: 0, savingsRate: 0 };
+    const currentBudget = data.currentBudget || { totalBudget: 0, totalSpent: 0, remaining: 0, efficiency: 0 };
+    const insights = data.insights || { primaryIncomeSource: 'Unknown', spendingPattern: 'Unknown', financialHealth: 'Unknown' };
 
     const overviewData = {
       labels: ['Income', 'Expenses', 'Savings'],

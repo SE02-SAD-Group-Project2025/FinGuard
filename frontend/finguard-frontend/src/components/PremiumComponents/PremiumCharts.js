@@ -18,18 +18,20 @@ const PremiumCharts = () => {
       });
 
       if (response.ok) {
-        const transactions = await response.json();
+        const transactionsData = await response.json();
+        const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.transactions || []);
+        const safeTransactions = Array.isArray(transactions) ? transactions : [];
         
         // Process data for charts
-        const monthlyData = processMonthlyData(transactions);
-        const categoryData = processCategoryData(transactions);
-        const trendData = processTrendData(transactions);
+        const monthlyData = processMonthlyData(safeTransactions);
+        const categoryData = processCategoryData(safeTransactions);
+        const trendData = processTrendData(safeTransactions);
 
         setChartData({
           monthly: monthlyData,
           categories: categoryData,
           trends: trendData,
-          totalTransactions: transactions.length
+          totalTransactions: safeTransactions.length
         });
       }
     } catch (error) {

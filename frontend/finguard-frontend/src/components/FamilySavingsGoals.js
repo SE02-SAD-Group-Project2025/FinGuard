@@ -81,8 +81,10 @@ const FamilySavingsGoals = () => {
       ]);
 
       const summaryData = summaryRes.ok ? await summaryRes.json() : { income: 0, expenses: 0, balance: 0 };
-      const transactions = transactionsRes.ok ? await transactionsRes.json() : [];
-      const budgets = budgetRes.ok ? await budgetRes.json() : [];
+      const transactionsData = transactionsRes.ok ? await transactionsRes.json() : { transactions: [] };
+      const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.transactions || []);
+      const budgetsData = budgetRes.ok ? await budgetRes.json() : [];
+      const budgets = Array.isArray(budgetsData) ? budgetsData : [];
 
       // Generate real savings goals based on user's financial data
       const realSavingsGoals = generateSavingsGoalsFromUserData(summaryData, transactions, budgets);
@@ -149,6 +151,9 @@ const FamilySavingsGoals = () => {
     const currentBalance = summary.balance || 0;
     const monthlyIncome = summary.income || 0;
     const monthlyExpenses = summary.expenses || 0;
+    
+    // Ensure transactions is always an array
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
 
     // Emergency Fund Goal (based on monthly expenses)
     if (monthlyExpenses > 0) {
@@ -174,7 +179,7 @@ const FamilySavingsGoals = () => {
     }
 
     // Vacation/Travel Goal (based on entertainment/leisure spending patterns)
-    const entertainmentTransactions = transactions.filter(t => 
+    const entertainmentTransactions = safeTransactions.filter(t => 
       t.category && (t.category.toLowerCase().includes('entertainment') || 
                      t.category.toLowerCase().includes('leisure') ||
                      t.category.toLowerCase().includes('dining'))
@@ -228,7 +233,7 @@ const FamilySavingsGoals = () => {
     }
 
     // Education Goal (if there are education-related transactions)
-    const educationTransactions = transactions.filter(t => 
+    const educationTransactions = safeTransactions.filter(t => 
       t.category && t.category.toLowerCase().includes('education')
     );
     

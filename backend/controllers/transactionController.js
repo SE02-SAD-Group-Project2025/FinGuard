@@ -482,7 +482,7 @@ const getChildAllowanceStatus = async (req, res) => {
     
     // Check if user is a child in a family group
     const childCheck = await db.query(`
-      SELECT fm.monthly_budget, fm.role, u.username, fg.group_name
+      SELECT fm.monthly_budget, fm.role, u.username, fg.name as group_name
       FROM family_members fm
       JOIN users u ON fm.user_id = u.id
       JOIN family_groups fg ON fm.family_group_id = fg.id

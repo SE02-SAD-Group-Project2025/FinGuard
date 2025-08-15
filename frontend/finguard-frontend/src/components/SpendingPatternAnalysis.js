@@ -33,11 +33,13 @@ const SpendingPatternAnalysis = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      const transactions = transactionsRes.ok ? await transactionsRes.json() : [];
+      const transactionsData = transactionsRes.ok ? await transactionsRes.json() : [];
+      const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.transactions || []);
+      const safeTransactions = Array.isArray(transactions) ? transactions : [];
       const budgetData = budgetRes.ok ? await budgetRes.json() : [];
 
       // Filter expense transactions
-      const expenseTransactions = transactions.filter(t => t.type === 'expense');
+      const expenseTransactions = safeTransactions.filter(t => t && t.type === 'expense');
       
       // Calculate total spending
       const totalSpending = expenseTransactions.reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
@@ -111,11 +113,11 @@ const SpendingPatternAnalysis = () => {
             trend,
             trendPercent,
             insights: [
-              `${expenseTransactions.filter(t => t.category === category).length} transactions this period`,
+              `${expenseTransactions.filter(t => t && t.category === category).length} transactions this period`,
               budgetAmount > 0 ? 
                 (amount > budgetAmount ? 'Over budget' : 'Within budget') : 
                 'No budget set',
-              `Average per transaction: Rs. ${Math.round(amount / Math.max(expenseTransactions.filter(t => t.category === category).length, 1))}`
+              `Average per transaction: Rs. ${Math.round(amount / Math.max(expenseTransactions.filter(t => t && t.category === category).length, 1))}`
             ]
           };
         });

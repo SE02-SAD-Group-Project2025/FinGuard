@@ -45,7 +45,9 @@ const PremiumCards = () => {
       if (currentResponse.ok && previousResponse.ok && transactionResponse.ok) {
         const currentData = await currentResponse.json();
         const previousData = await previousResponse.json();
-        const transactions = await transactionResponse.json();
+        const transactionsData = await transactionResponse.json();
+        const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.transactions || []);
+        const safeTransactions = Array.isArray(transactions) ? transactions : [];
         
         let liabilities = 0;
         if (liabilitiesResponse.ok) {
@@ -54,7 +56,7 @@ const PremiumCards = () => {
         }
 
         // Calculate additional premium metrics
-        const totalAssets = currentData.balance + (transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0));
+        const totalAssets = currentData.balance + (safeTransactions.filter(t => t && t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0));
         const netWorth = totalAssets - liabilities;
 
         setFinancialData({

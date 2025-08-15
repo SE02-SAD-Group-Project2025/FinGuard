@@ -419,31 +419,37 @@ const FamilyManagement = () => {
                       <span className="lg:hidden">Categories</span>
                     </button>
                     
-                    <button
-                      onClick={() => setShowAllowances(!showAllowances)}
-                      className={`px-3 py-2 rounded-lg transition-colors flex items-center text-sm ${
-                        showAllowances 
-                          ? 'bg-orange-600 text-white' 
-                          : 'border border-orange-300 text-orange-600 hover:bg-orange-50'
-                      }`}
-                    >
-                      <Users className="w-4 h-4 mr-1 sm:mr-2" />
-                      <span className="hidden lg:inline">Allowance Management</span>
-                      <span className="lg:hidden">Allowances</span>
-                    </button>
+                    {/* Only show Allowance Management for family heads and parents */}
+                    {(familyData.isHead || familyData.familyGroup.role === 'parent') && (
+                      <button
+                        onClick={() => setShowAllowances(!showAllowances)}
+                        className={`px-3 py-2 rounded-lg transition-colors flex items-center text-sm ${
+                          showAllowances 
+                            ? 'bg-orange-600 text-white' 
+                            : 'border border-orange-300 text-orange-600 hover:bg-orange-50'
+                        }`}
+                      >
+                        <Users className="w-4 h-4 mr-1 sm:mr-2" />
+                        <span className="hidden lg:inline">Allowance Management</span>
+                        <span className="lg:hidden">Allowances</span>
+                      </button>
+                    )}
                     
-                    <button
-                      onClick={() => setShowApprovals(!showApprovals)}
-                      className={`px-3 py-2 rounded-lg transition-colors flex items-center text-sm ${
-                        showApprovals 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'border border-indigo-300 text-indigo-600 hover:bg-indigo-50'
-                      }`}
-                    >
-                      <Users className="w-4 h-4 mr-1 sm:mr-2" />
-                      <span className="hidden lg:inline">Expense Approvals</span>
-                      <span className="lg:hidden">Approvals</span>
-                    </button>
+                    {/* Only show Expense Approvals for family heads and parents */}
+                    {(familyData.isHead || familyData.familyGroup.role === 'parent') && (
+                      <button
+                        onClick={() => setShowApprovals(!showApprovals)}
+                        className={`px-3 py-2 rounded-lg transition-colors flex items-center text-sm ${
+                          showApprovals 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'border border-indigo-300 text-indigo-600 hover:bg-indigo-50'
+                        }`}
+                      >
+                        <Users className="w-4 h-4 mr-1 sm:mr-2" />
+                        <span className="hidden lg:inline">Expense Approvals</span>
+                        <span className="lg:hidden">Approvals</span>
+                      </button>
+                    )}
                     
                     <button
                       onClick={() => setShowReports(!showReports)}

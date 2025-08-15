@@ -66,11 +66,12 @@ const AIRecommendations = () => {
         const aiResponse = await response.json();
         console.log('🤖 AI Response:', aiResponse); // Debug log
         
-        if (aiResponse.recommendations && aiResponse.recommendations.length > 0) {
+        const recommendations = Array.isArray(aiResponse.recommendations) ? aiResponse.recommendations : [];
+        if (recommendations.length > 0) {
           // Convert real ML recommendations to display format
-          const mlRecommendations = aiResponse.recommendations.slice(0, 2).map((rec, index) => ({
-            title: rec.category ? `${rec.category} Analysis` : 'Financial Pattern Analysis',
-            description: rec.reasoning || rec.recommendation || rec.action || `AI suggests ${rec.type || 'optimization'} based on your spending patterns`,
+          const mlRecommendations = recommendations.slice(0, 2).map((rec, index) => ({
+            title: (rec && rec.category) ? `${rec.category} Analysis` : 'Financial Pattern Analysis',
+            description: (rec && (rec.reasoning || rec.recommendation || rec.action)) || `AI suggests ${(rec && rec.type) || 'optimization'} based on your spending patterns`,
             icon: index === 0 ? 'trend-up' : 'brain'
           }));
           
@@ -80,7 +81,7 @@ const AIRecommendations = () => {
             confidence: aiResponse.confidence || 75,
             mlModel: 'Statistical ML Analysis',
             totalSavings: aiResponse.totalPotentialSavings || 0,
-            recommendationsCount: aiResponse.recommendations.length
+            recommendationsCount: recommendations.length
           });
         } else {
           // If we have analysis details but no recommendations, show a summary

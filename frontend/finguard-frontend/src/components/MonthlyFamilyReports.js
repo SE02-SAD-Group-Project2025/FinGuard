@@ -51,134 +51,83 @@ const MonthlyFamilyReports = () => {
     setLoading(true);
 
     try {
-      // Simulate API call - would normally fetch from backend
-      setTimeout(() => {
+      const token = localStorage.getItem('finguard-token');
+      const [year, month] = selectedMonth.split('-');
+      
+      // Fetch family financial summary
+      const response = await fetch(`http://localhost:5000/api/family/financial-summary?month=${month}&year=${year}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Transform API data to match component structure
+        const familyOverview = {
+          totalIncome: data.summary.totalIncome,
+          totalExpenses: data.summary.totalExpenses,
+          totalSavings: data.summary.totalSavings,
+          savingsRate: data.summary.totalIncome > 0 ? ((data.summary.totalSavings / data.summary.totalIncome) * 100).toFixed(1) : 0,
+          budgetUtilization: data.summary.totalBudget > 0 ? ((data.summary.totalExpenses / data.summary.totalBudget) * 100).toFixed(1) : 0,
+          memberCount: data.members.length
+        };
+
+        const memberBreakdown = data.members.map(member => ({
+          id: member.userId,
+          name: member.username,
+          role: member.role,
+          income: member.monthlyIncome,
+          expenses: member.monthlyExpenses,
+          budget: member.monthlyBudget,
+          budgetUtilization: member.budgetUtilization,
+          savingsContribution: member.monthlyBalance,
+          topCategories: [] // This would need additional API calls to get category breakdown
+        }));
+
+        setReportData({
+          month: selectedMonth,
+          familyOverview,
+          memberBreakdown,
+          categoryBreakdown: {}, // Would need additional API call to get category breakdown
+          savingsGoals: [], // Would need additional API call to get savings goals
+          insights: [] // Would need additional API call to get AI insights
+        });
+      } else {
+        // If API fails, show empty state instead of mock data
         setReportData({
           month: selectedMonth,
           familyOverview: {
-            totalIncome: 520000,
-            totalExpenses: 485000,
-            totalSavings: 35000,
-            savingsRate: 6.7,
-            budgetUtilization: 91.2,
-            memberCount: 4
+            totalIncome: 0,
+            totalExpenses: 0,
+            totalSavings: 0,
+            savingsRate: 0,
+            budgetUtilization: 0,
+            memberCount: 0
           },
-          memberBreakdown: [
-            {
-              id: 1,
-              name: 'Chathura (Head)',
-              role: 'Father',
-              income: 450000,
-              expenses: 125000,
-              budget: 150000,
-              budgetUtilization: 83.3,
-              savingsContribution: 25000,
-              topCategories: [
-                { category: 'Salary', amount: 450000, type: 'income' },
-                { category: 'Transportation', amount: 45000, type: 'expense' },
-                { category: 'Food & Dining', amount: 35000, type: 'expense' }
-              ]
-            },
-            {
-              id: 2,
-              name: 'Regular User (Wife)',
-              role: 'Mother',
-              income: 70000,
-              expenses: 95000,
-              budget: 100000,
-              budgetUtilization: 95.0,
-              savingsContribution: 5000,
-              topCategories: [
-                { category: 'Freelance', amount: 70000, type: 'income' },
-                { category: 'Groceries', amount: 40000, type: 'expense' },
-                { category: 'Healthcare', amount: 25000, type: 'expense' }
-              ]
-            },
-            {
-              id: 3,
-              name: 'Son',
-              role: 'Child',
-              income: 0,
-              expenses: 15000,
-              budget: 20000,
-              budgetUtilization: 75.0,
-              savingsContribution: 2000,
-              topCategories: [
-                { category: 'Entertainment', amount: 8000, type: 'expense' },
-                { category: 'Education', amount: 5000, type: 'expense' },
-                { category: 'Snacks', amount: 2000, type: 'expense' }
-              ]
-            },
-            {
-              id: 4,
-              name: 'Daughter',
-              role: 'Child',
-              income: 0,
-              expenses: 12000,
-              budget: 18000,
-              budgetUtilization: 66.7,
-              savingsContribution: 3000,
-              topCategories: [
-                { category: 'Education', amount: 6000, type: 'expense' },
-                { category: 'Entertainment', amount: 4000, type: 'expense' },
-                { category: 'Clothing', amount: 2000, type: 'expense' }
-              ]
-            }
-          ],
-          categoryBreakdown: {
-            'Food & Dining': { amount: 125000, percentage: 25.8, trend: 'up', previousAmount: 110000 },
-            'Transportation': { amount: 85000, percentage: 17.5, trend: 'down', previousAmount: 95000 },
-            'Education': { amount: 55000, percentage: 11.3, trend: 'up', previousAmount: 45000 },
-            'Healthcare': { amount: 45000, percentage: 9.3, trend: 'stable', previousAmount: 44000 },
-            'Entertainment': { amount: 40000, percentage: 8.2, trend: 'up', previousAmount: 32000 },
-            'Utilities': { amount: 35000, percentage: 7.2, trend: 'stable', previousAmount: 36000 },
-            'Shopping': { amount: 30000, percentage: 6.2, trend: 'down', previousAmount: 38000 },
-            'Other': { amount: 70000, percentage: 14.4, trend: 'stable', previousAmount: 68000 }
-          },
-          budgetPerformance: {
-            onTrack: 2,
-            overBudget: 1,
-            underBudget: 1,
-            overallPerformance: 'good',
-            improvementAreas: ['Food & Dining', 'Entertainment'],
-            excellentAreas: ['Transportation', 'Savings Goals']
-          },
-          goalsProgress: [
-            { name: 'Emergency Fund', target: 200000, current: 125000, progress: 62.5 },
-            { name: 'Vacation Fund', target: 150000, current: 85000, progress: 56.7 },
-            { name: 'Education Fund', target: 100000, current: 75000, progress: 75.0 }
-          ],
-          insights: [
-            {
-              type: 'achievement',
-              title: 'Savings Goal Exceeded!',
-              description: 'Family saved Rs.35,000 this month, exceeding the target by 15%',
-              impact: 'positive'
-            },
-            {
-              type: 'warning',
-              title: 'Food Budget Exceeded',
-              description: 'Food & Dining expenses were 14% higher than budgeted',
-              impact: 'negative'
-            },
-            {
-              type: 'tip',
-              title: 'Transportation Savings',
-              description: 'Great job reducing transportation costs by 11% this month',
-              impact: 'positive'
-            }
-          ],
-          comparisonData: {
-            incomeChange: 8.5,
-            expenseChange: 12.3,
-            savingsChange: -15.2,
-            budgetAdherence: 91.2
-          }
+          memberBreakdown: [],
+          categoryBreakdown: {},
+          savingsGoals: [],
+          insights: []
         });
-        setLoading(false);
-      }, 1500);
+      }
     } catch (error) {
       console.error('Error loading family report:', error);
+      setReportData({
+        month: selectedMonth,
+        familyOverview: {
+          totalIncome: 0,
+          totalExpenses: 0,
+          totalSavings: 0,
+          savingsRate: 0,
+          budgetUtilization: 0,
+          memberCount: 0
+        },
+        memberBreakdown: [],
+        categoryBreakdown: {},
+        savingsGoals: [],
+        insights: []
+      });
+    } finally {
       setLoading(false);
     }
   };
@@ -233,9 +182,9 @@ const MonthlyFamilyReports = () => {
   if (!reportData) return null;
 
   const categoryChart = {
-    labels: Object.keys(reportData.categoryBreakdown),
+    labels: Object.keys(reportData?.categoryBreakdown || {}),
     datasets: [{
-      data: Object.values(reportData.categoryBreakdown).map(cat => cat.amount),
+      data: Object.values(reportData?.categoryBreakdown || {}).map(cat => cat?.amount || 0),
       backgroundColor: [
         '#ef4444', '#f97316', '#eab308', '#84cc16',
         '#06b6d4', '#8b5cf6', '#ec4899', '#64748b'
@@ -246,18 +195,18 @@ const MonthlyFamilyReports = () => {
   };
 
   const memberComparisonChart = {
-    labels: reportData.memberBreakdown.map(m => m.name.split(' ')[0]),
+    labels: reportData?.memberBreakdown?.map(m => m.name?.split(' ')[0]) || [],
     datasets: [
       {
         label: 'Income',
-        data: reportData.memberBreakdown.map(m => m.income),
+        data: reportData?.memberBreakdown?.map(m => m.income) || [],
         backgroundColor: '#10b981',
         borderColor: '#059669',
         borderWidth: 1
       },
       {
         label: 'Expenses', 
-        data: reportData.memberBreakdown.map(m => m.expenses),
+        data: reportData?.memberBreakdown?.map(m => m.expenses) || [],
         backgroundColor: '#ef4444',
         borderColor: '#dc2626',
         borderWidth: 1
@@ -344,11 +293,13 @@ const MonthlyFamilyReports = () => {
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-500" />
               </div>
-              <div className="mt-2 flex items-center">
-                <span className="text-sm text-green-600">
-                  +{reportData.comparisonData.incomeChange}% from last month
-                </span>
-              </div>
+              {reportData.comparisonData && (
+                <div className="mt-2 flex items-center">
+                  <span className="text-sm text-green-600">
+                    +{reportData.comparisonData.incomeChange}% from last month
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -361,11 +312,13 @@ const MonthlyFamilyReports = () => {
                 </div>
                 <TrendingDown className="w-8 h-8 text-red-500" />
               </div>
-              <div className="mt-2 flex items-center">
-                <span className="text-sm text-red-600">
-                  +{reportData.comparisonData.expenseChange}% from last month
-                </span>
-              </div>
+              {reportData.comparisonData && (
+                <div className="mt-2 flex items-center">
+                  <span className="text-sm text-red-600">
+                    +{reportData.comparisonData.expenseChange}% from last month
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -379,9 +332,11 @@ const MonthlyFamilyReports = () => {
                 <DollarSign className="w-8 h-8 text-blue-500" />
               </div>
               <div className="mt-2 flex items-center">
-                <span className={`text-sm ${reportData.comparisonData.savingsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {reportData.comparisonData.savingsChange >= 0 ? '+' : ''}{reportData.comparisonData.savingsChange}% from last month
-                </span>
+                {reportData.comparisonData && (
+                  <span className={`text-sm ${reportData.comparisonData.savingsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {reportData.comparisonData.savingsChange >= 0 ? '+' : ''}{reportData.comparisonData.savingsChange}% from last month
+                  </span>
+                )}
               </div>
             </div>
 
@@ -397,7 +352,7 @@ const MonthlyFamilyReports = () => {
               </div>
               <div className="mt-2 flex items-center">
                 <span className="text-sm text-gray-600">
-                  Budget adherence: {reportData.comparisonData.budgetAdherence}%
+                  Budget adherence: {reportData.comparisonData?.budgetAdherence || 0}%
                 </span>
               </div>
             </div>
@@ -407,7 +362,7 @@ const MonthlyFamilyReports = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Key Insights</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {reportData.insights.map((insight, index) => (
+              {reportData.insights?.map((insight, index) => (
                 <div
                   key={index}
                   className={`p-4 rounded-lg border-l-4 ${
@@ -440,7 +395,7 @@ const MonthlyFamilyReports = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Family Goals Progress</h3>
             <div className="space-y-4">
-              {reportData.goalsProgress.map((goal, index) => (
+              {reportData.goalsProgress?.map((goal, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
@@ -478,7 +433,7 @@ const MonthlyFamilyReports = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reportData.memberBreakdown.map(member => (
+            {reportData?.memberBreakdown?.map(member => (
               <div key={member.id} className="bg-white rounded-xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-gray-900">{member.name}</h4>
@@ -542,12 +497,12 @@ const MonthlyFamilyReports = () => {
                 <Pie data={categoryChart} options={chartOptions} />
               </div>
               <div className="space-y-3">
-                {Object.entries(reportData.categoryBreakdown).map(([category, data]) => (
+                {Object.entries(reportData?.categoryBreakdown || {}).map(([category, data]) => (
                   <div key={category} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center">
                       <div
                         className="w-4 h-4 rounded-full mr-3"
-                        style={{ backgroundColor: categoryChart.datasets[0].backgroundColor[Object.keys(reportData.categoryBreakdown).indexOf(category)] }}
+                        style={{ backgroundColor: categoryChart.datasets[0].backgroundColor[Object.keys(reportData?.categoryBreakdown || {}).indexOf(category)] }}
                       ></div>
                       <span className="font-medium text-gray-900">{category}</span>
                     </div>
@@ -580,26 +535,26 @@ const MonthlyFamilyReports = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-xl p-6 shadow-sm text-center">
               <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-600">{reportData.budgetPerformance.onTrack}</p>
+              <p className="text-2xl font-bold text-green-600">{reportData.budgetPerformance?.onTrack || 0}</p>
               <p className="text-sm text-gray-600">On Track</p>
             </div>
             
             <div className="bg-white rounded-xl p-6 shadow-sm text-center">
               <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-red-600">{reportData.budgetPerformance.overBudget}</p>
+              <p className="text-2xl font-bold text-red-600">{reportData.budgetPerformance?.overBudget || 0}</p>
               <p className="text-sm text-gray-600">Over Budget</p>
             </div>
             
             <div className="bg-white rounded-xl p-6 shadow-sm text-center">
               <TrendingDown className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-blue-600">{reportData.budgetPerformance.underBudget}</p>
+              <p className="text-2xl font-bold text-blue-600">{reportData.budgetPerformance?.underBudget || 0}</p>
               <p className="text-sm text-gray-600">Under Budget</p>
             </div>
             
             <div className="bg-white rounded-xl p-6 shadow-sm text-center">
               <Award className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
               <p className="text-2xl font-bold text-yellow-600 capitalize">
-                {reportData.budgetPerformance.overallPerformance}
+                {reportData.budgetPerformance?.overallPerformance || 'N/A'}
               </p>
               <p className="text-sm text-gray-600">Overall</p>
             </div>
@@ -612,7 +567,7 @@ const MonthlyFamilyReports = () => {
                 Areas for Improvement
               </h4>
               <div className="space-y-3">
-                {reportData.budgetPerformance.improvementAreas.map((area, index) => (
+                {reportData.budgetPerformance?.improvementAreas?.map((area, index) => (
                   <div key={index} className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
                     <p className="font-medium text-gray-900">{area}</p>
                     <p className="text-sm text-gray-600">Consider reducing spending in this category</p>
@@ -627,7 +582,7 @@ const MonthlyFamilyReports = () => {
                 Excellent Performance
               </h4>
               <div className="space-y-3">
-                {reportData.budgetPerformance.excellentAreas.map((area, index) => (
+                {reportData.budgetPerformance?.excellentAreas?.map((area, index) => (
                   <div key={index} className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
                     <p className="font-medium text-gray-900">{area}</p>
                     <p className="text-sm text-gray-600">Keep up the great work in this area!</p>

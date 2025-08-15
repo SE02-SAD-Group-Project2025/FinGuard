@@ -9,7 +9,14 @@ const {
   declineFamilyInvitation,
   removeFamilyMember,
   updateMemberBudget,
-  getFamilyFinancialSummary
+  getFamilyFinancialSummary,
+  getFamilyCategories,
+  getFamilyMembers,
+  getFamilyAllowances,
+  getPendingExpenseApprovals,
+  getExpenseApprovalHistory,
+  createExpenseApprovalRequest,
+  handleExpenseApprovalDecision
 } = require('../controllers/familyController');
 
 // All routes require authentication
@@ -38,5 +45,20 @@ router.put('/member/:memberId/budget', updateMemberBudget);
 
 // Get family financial summary
 router.get('/financial-summary', getFamilyFinancialSummary);
+
+// Get family categories
+router.get('/categories', getFamilyCategories);
+
+// Get family members
+router.get('/members', getFamilyMembers);
+
+// Get family allowances
+router.get('/allowances', getFamilyAllowances);
+
+// Expense approval routes
+router.get('/expense-approvals/pending', getPendingExpenseApprovals);
+router.get('/expense-approvals/history', getExpenseApprovalHistory);
+router.post('/expense-approvals', createExpenseApprovalRequest);
+router.post('/expense-approvals/:requestId/:decision', handleExpenseApprovalDecision);
 
 module.exports = router;

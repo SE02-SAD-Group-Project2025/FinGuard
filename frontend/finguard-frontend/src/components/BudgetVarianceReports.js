@@ -105,7 +105,8 @@ const BudgetVarianceReports = () => {
       const budgetData = budgetRes.ok ? await budgetRes.json() : [];
       const summaryData = summaryRes.ok ? await summaryRes.json() : { income: 0, expenses: 0 };
       const aiInsights = aiInsightsRes.ok ? await aiInsightsRes.json() : { recommendations: [] };
-      const transactionsData = transactionsRes.ok ? await transactionsRes.json() : [];
+      const transactionsResponse = transactionsRes.ok ? await transactionsRes.json() : [];
+      const transactionsData = Array.isArray(transactionsResponse) ? transactionsResponse : (transactionsResponse.transactions || []);
 
       // Calculate real variance data
       const totalBudget = budgetData.reduce((sum, b) => sum + (parseFloat(b.budget_limit) || 0), 0);
@@ -181,7 +182,9 @@ const BudgetVarianceReports = () => {
       });
 
       // Add spending pattern alerts based on transaction analysis
-      const currentMonthTransactions = transactionsData.filter(t => {
+      const safeTransactionsData = Array.isArray(transactionsData) ? transactionsData : [];
+      const currentMonthTransactions = safeTransactionsData.filter(t => {
+        if (!t || !t.date) return false;
         const transactionDate = new Date(t.date);
         return transactionDate.getMonth() + 1 === currentMonth && transactionDate.getFullYear() === currentYear;
       });

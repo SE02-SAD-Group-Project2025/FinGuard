@@ -1,0 +1,56 @@
+
+
+
+Create an advanced financial reporting feature with visual and mathematical analysis, including:
+
+Report 1 – Yearly Spending vs Budget Analysis
+
+Allow the user to select a category (e.g., Food, Transportation, Utilities, etc.).
+
+Display a bar chart or other suitable chart comparing:
+
+Actual Spending per month
+
+Budget Allocated per month
+
+Cover the entire selected year.
+
+Below the chart, include mathematical calculations such as:
+
+Total budget allocated for the year
+
+Total actual spending for the year
+
+Variance (budget – spending)
+
+Percentage of budget used
+
+Report 2 – Monthly Savings and Expense Breakdown
+
+For the selected month, show:
+
+Monthly Income
+
+Total Budget Allocated
+
+Total Actual Expenses
+
+Total Savings (Income – Expenses)
+
+Provide a detailed breakdown by category, showing:
+
+Each category’s budget
+
+Actual spending
+
+Savings for that category (Budget – Spending)
+
+Use charts where applicable (e.g., pie chart for category spending distribution, bar chart for savings vs expenses).
+
+General Requirements:
+
+Charts should be clear, visually appealing, and easy to interpret.
+
+Ensure all calculations are accurate and displayed with proper labels and units (e.g., currency format).
+
+

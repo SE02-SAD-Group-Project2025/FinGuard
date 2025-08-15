@@ -49,6 +49,9 @@ const AdvanceReports = () => {
         const transactions = await transactionsResponse.json();
         const summary = await summaryResponse.json();
         
+        console.log('Transactions response:', transactions);
+        console.log('Summary response:', summary);
+        
         let liabilities = 0;
         if (liabilitiesResponse.ok) {
           const liabilitiesData = await liabilitiesResponse.json();
@@ -57,7 +60,9 @@ const AdvanceReports = () => {
 
         // Process category data
         const categoryMap = {};
-        const expenses = transactions.filter(t => t.type === 'expense');
+        // Ensure transactions is an array before filtering
+        const transactionsArray = Array.isArray(transactions) ? transactions : [];
+        const expenses = transactionsArray.filter(t => t.type === 'expense');
         
         expenses.forEach(transaction => {
           const category = transaction.category || 'Uncategorized';
@@ -85,7 +90,7 @@ const AdvanceReports = () => {
             totalExpenses: summary.expenses,
             savings: savings,
             categories: categories,
-            totalTransactions: transactions.length,
+            totalTransactions: transactionsArray.length,
             liabilities: liabilities
           },
           trends: {
@@ -95,6 +100,19 @@ const AdvanceReports = () => {
             budgetEfficiency: Math.round(budgetEfficiency)
           }
         });
+      } else {
+        console.error('API responses not ok:', {
+          transactions: transactionsResponse.status,
+          summary: summaryResponse.status
+        });
+        if (!transactionsResponse.ok) {
+          const errorText = await transactionsResponse.text();
+          console.error('Transactions error:', errorText);
+        }
+        if (!summaryResponse.ok) {
+          const errorText = await summaryResponse.text();
+          console.error('Summary error:', errorText);
+        }
       }
     } catch (error) {
       console.error('Error fetching report data:', error);

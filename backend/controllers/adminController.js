@@ -88,12 +88,18 @@ exports.updateUserRole = async (req, res) => {
     const currentUser = currentUserResult.rows[0];
     const oldRole = currentUser.role;
 
+    // Determine is_premium value based on role
+    const isPremium = role === 'Premium User';
+    
+    console.log(`🔄 Updating user ${userId} role: ${oldRole} → ${role}, is_premium: ${oldRole === 'Premium User'} → ${isPremium}`);
+    
     const result = await pool.query(
-      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, username, role',
-      [role, userId]
+      'UPDATE users SET role = $1, is_premium = $2 WHERE id = $3 RETURNING id, username, role, is_premium',
+      [role, isPremium, userId]
     );
 
     const user = result.rows[0];
+    console.log(`✅ User ${user.username} role updated successfully: ${user.role}, is_premium: ${user.is_premium}`);
 
     // If admin assigns Premium User role, create corresponding subscription
     if (role === 'Premium User' && oldRole !== 'Premium User') {
@@ -155,6 +161,9 @@ exports.updateUserRole = async (req, res) => {
           old_role: oldRole,
           new_role: role,
           role_change: `${oldRole} → ${role}`,
+          old_is_premium: oldRole === 'Premium User',
+          new_is_premium: isPremium,
+          premium_status_change: `${oldRole === 'Premium User'} → ${isPremium}`,
           admin_action: true,
           ip_address: req.ip || req.connection?.remoteAddress,
           user_agent: req.get('User-Agent')
@@ -165,7 +174,10 @@ exports.updateUserRole = async (req, res) => {
       console.error('❌ Failed to log admin role change:', logErr);
     }
 
-    res.json({ message: `User role updated to ${role}`, user: user });
+    res.json({ 
+      message: `User role updated to ${role}${isPremium ? ' (Premium access granted)' : ''}`, 
+      user: user 
+    });
   } catch (error) {
     console.error('Error updating user role:', error);
     res.status(500).json({ error: 'Internal server error' });

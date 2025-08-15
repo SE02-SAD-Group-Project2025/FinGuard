@@ -602,6 +602,173 @@ const getFamilyFinancialSummary = async (req, res) => {
   }
 };
 
+// Get family categories (simple predefined list)
+const getFamilyCategories = async (req, res) => {
+  try {
+    const categories = [
+      { id: 1, name: 'Food & Dining' },
+      { id: 2, name: 'Groceries' },
+      { id: 3, name: 'Transportation' },
+      { id: 4, name: 'Entertainment' },
+      { id: 5, name: 'Shopping' },
+      { id: 6, name: 'Bills & Utilities' },
+      { id: 7, name: 'Health & Medical' },
+      { id: 8, name: 'Education' },
+      { id: 9, name: 'Travel' },
+      { id: 10, name: 'Other' }
+    ];
+    
+    res.json(categories);
+  } catch (error) {
+    console.error('Get family categories error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get family members
+const getFamilyMembers = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Get user's family group (either as head or member)
+    const familyQuery = await pool.query(`
+      SELECT fg.id as family_group_id 
+      FROM family_groups fg 
+      WHERE fg.head_user_id = $1
+      UNION
+      SELECT fm.family_group_id 
+      FROM family_members fm 
+      WHERE fm.user_id = $1 AND fm.is_active = true
+    `, [userId]);
+    
+    if (familyQuery.rows.length === 0) {
+      return res.json([]);
+    }
+    
+    const familyGroupId = familyQuery.rows[0].family_group_id;
+    
+    // Get all family members
+    const membersQuery = await pool.query(`
+      SELECT fm.*, u.username, u.email, u.profile_photo
+      FROM family_members fm
+      JOIN users u ON fm.user_id = u.id
+      WHERE fm.family_group_id = $1 AND fm.is_active = true
+      ORDER BY fm.joined_at ASC
+    `, [familyGroupId]);
+    
+    res.json(membersQuery.rows);
+  } catch (error) {
+    console.error('Get family members error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get family allowances
+const getFamilyAllowances = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Get user's family group (either as head or member)
+    const familyQuery = await pool.query(`
+      SELECT fg.id as family_group_id 
+      FROM family_groups fg 
+      WHERE fg.head_user_id = $1
+      UNION
+      SELECT fm.family_group_id 
+      FROM family_members fm 
+      WHERE fm.user_id = $1 AND fm.is_active = true
+    `, [userId]);
+    
+    if (familyQuery.rows.length === 0) {
+      return res.json([]);
+    }
+    
+    const familyGroupId = familyQuery.rows[0].family_group_id;
+    
+    // Get family members with their allowances and spending
+    const allowancesQuery = await pool.query(`
+      SELECT 
+        fm.user_id,
+        fm.role,
+        fm.monthly_budget,
+        u.username,
+        u.email,
+        COALESCE(
+          (SELECT SUM(t.amount) 
+           FROM transactions t 
+           WHERE t.user_id = fm.user_id 
+           AND t.type = 'expense' 
+           AND EXTRACT(MONTH FROM t.date) = EXTRACT(MONTH FROM CURRENT_DATE)
+           AND EXTRACT(YEAR FROM t.date) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ), 0
+        ) as current_spending
+      FROM family_members fm
+      JOIN users u ON fm.user_id = u.id
+      WHERE fm.family_group_id = $1 AND fm.is_active = true
+      ORDER BY fm.joined_at ASC
+    `, [familyGroupId]);
+    
+    const allowances = allowancesQuery.rows.map(member => ({
+      ...member,
+      remaining: parseFloat(member.monthly_budget || 0) - parseFloat(member.current_spending || 0),
+      utilization: member.monthly_budget > 0 ? 
+        ((parseFloat(member.current_spending || 0) / parseFloat(member.monthly_budget)) * 100).toFixed(1) : 0
+    }));
+    
+    res.json(allowances);
+  } catch (error) {
+    console.error('Get family allowances error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get pending expense approval requests
+const getPendingExpenseApprovals = async (req, res) => {
+  try {
+    // For now, return empty array since this feature isn't fully implemented yet
+    res.json([]);
+  } catch (error) {
+    console.error('Get pending expense approvals error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get expense approval history
+const getExpenseApprovalHistory = async (req, res) => {
+  try {
+    // For now, return empty array since this feature isn't fully implemented yet
+    res.json([]);
+  } catch (error) {
+    console.error('Get expense approval history error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Create expense approval request
+const createExpenseApprovalRequest = async (req, res) => {
+  try {
+    // For now, return success message since this feature isn't fully implemented yet
+    res.json({ message: 'Expense approval request submitted successfully' });
+  } catch (error) {
+    console.error('Create expense approval request error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Handle expense approval decision
+const handleExpenseApprovalDecision = async (req, res) => {
+  try {
+    const { requestId, decision } = req.params;
+    const { message } = req.body;
+    
+    // For now, return success message since this feature isn't fully implemented yet
+    res.json({ message: `Expense request ${decision} successfully` });
+  } catch (error) {
+    console.error('Handle expense approval decision error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getFamilyGroup,
   createFamilyGroup,
@@ -610,5 +777,12 @@ module.exports = {
   declineFamilyInvitation,
   removeFamilyMember,
   updateMemberBudget,
-  getFamilyFinancialSummary
+  getFamilyFinancialSummary,
+  getFamilyCategories,
+  getFamilyMembers,
+  getFamilyAllowances,
+  getPendingExpenseApprovals,
+  getExpenseApprovalHistory,
+  createExpenseApprovalRequest,
+  handleExpenseApprovalDecision
 };

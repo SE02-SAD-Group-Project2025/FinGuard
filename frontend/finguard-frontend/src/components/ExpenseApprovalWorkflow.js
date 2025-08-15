@@ -20,8 +20,8 @@ const ExpenseApprovalWorkflow = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Mock user role for demonstration
-  const userRole = 'parent'; // 'parent' or 'child'
+  // Get user role from subscription data
+  const userRole = user?.role?.toLowerCase()?.includes('child') ? 'child' : 'parent';
 
   // Load data on component mount
   useEffect(() => {
@@ -48,129 +48,78 @@ const ExpenseApprovalWorkflow = () => {
 
   // Load pending approval requests
   const loadPendingApprovals = async () => {
-    // Mock data - replace with actual API call
-    const mockPendingApprovals = [
-      {
-        id: 1,
-        requesterName: 'Emma Johnson',
-        requesterId: 'child1',
-        amount: 45.99,
-        category: 'Entertainment',
-        description: 'Movie tickets with friends',
-        merchant: 'AMC Theaters',
-        requestedDate: '2024-12-08',
-        expenseDate: '2024-12-10',
-        priority: 'medium',
-        reason: 'Weekend plans with school friends',
-        attachments: ['receipt.jpg'],
-        status: 'pending',
-        allowanceBalance: 75.00,
-        monthlySpent: 120.00,
-        monthlyLimit: 200.00
-      },
-      {
-        id: 2,
-        requesterName: 'Michael Johnson',
-        requesterId: 'child2',
-        amount: 89.99,
-        category: 'Education',
-        description: 'Programming course subscription',
-        merchant: 'Udemy',
-        requestedDate: '2024-12-07',
-        expenseDate: '2024-12-07',
-        priority: 'high',
-        reason: 'Required for computer science class project',
-        attachments: [],
-        status: 'pending',
-        allowanceBalance: 120.00,
-        monthlySpent: 45.00,
-        monthlyLimit: 150.00
-      },
-      {
-        id: 3,
-        requesterName: 'Sophie Johnson',
-        requesterId: 'child3',
-        amount: 25.00,
-        category: 'Food & Dining',
-        description: 'Lunch with study group',
-        merchant: 'Pizza Hut',
-        requestedDate: '2024-12-08',
-        expenseDate: '2024-12-08',
-        priority: 'low',
-        reason: 'Group study session for finals',
-        attachments: [],
-        status: 'pending',
-        allowanceBalance: 30.00,
-        monthlySpent: 85.00,
-        monthlyLimit: 100.00
+    try {
+      const token = localStorage.getItem('finguard-token');
+      const response = await fetch('http://localhost:5000/api/family/expense-approvals/pending', {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPendingApprovals(data);
+      } else {
+        // If endpoint doesn't exist yet, show empty array instead of mock data
+        setPendingApprovals([]);
       }
-    ];
-
-    setPendingApprovals(mockPendingApprovals);
+    } catch (error) {
+      console.error('Error loading pending approvals:', error);
+      setPendingApprovals([]);
+    }
   };
 
   // Load approval history
   const loadApprovalHistory = async () => {
-    // Mock data - replace with actual API call
-    const mockHistory = [
-      {
-        id: 101,
-        requesterName: 'Emma Johnson',
-        requesterId: 'child1',
-        amount: 35.00,
-        category: 'Shopping',
-        description: 'New headphones',
-        approverName: 'John Johnson',
-        approverId: 'parent1',
-        status: 'approved',
-        approvedDate: '2024-12-06',
-        approverMessage: 'Approved - needed for online classes',
-        requestedDate: '2024-12-05'
-      },
-      {
-        id: 102,
-        requesterName: 'Michael Johnson',
-        requesterId: 'child2',
-        amount: 75.00,
-        category: 'Entertainment',
-        description: 'Concert tickets',
-        approverName: 'John Johnson',
-        approverId: 'parent1',
-        status: 'rejected',
-        approvedDate: '2024-12-04',
-        approverMessage: 'Already over entertainment budget this month',
-        requestedDate: '2024-12-03'
+    try {
+      const token = localStorage.getItem('finguard-token');
+      const response = await fetch('http://localhost:5000/api/family/expense-approvals/history', {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setApprovalHistory(data);
+      } else {
+        // If endpoint doesn't exist yet, show empty array instead of mock data
+        setApprovalHistory([]);
       }
-    ];
-
-    setApprovalHistory(mockHistory);
+    } catch (error) {
+      console.error('Error loading approval history:', error);
+      setApprovalHistory([]);
+    }
   };
 
   // Handle approval decision
   const handleApprovalDecision = async (requestId, decision, message = '') => {
     setLoading(true);
     try {
-      const request = pendingApprovals.find(r => r.id === requestId);
-      if (!request) return;
+      const token = localStorage.getItem('finguard-token');
+      const response = await fetch(`http://localhost:5000/api/family/expense-approvals/${requestId}/${decision}`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message })
+      });
 
-      // Mock API call
-      const updatedRequest = {
-        ...request,
-        status: decision,
-        approverName: user?.name || 'Parent',
-        approverId: user?.id || 'parent1',
-        approvedDate: new Date().toISOString().split('T')[0],
-        approverMessage: message
-      };
-
-      // Move from pending to history
-      setPendingApprovals(prev => prev.filter(r => r.id !== requestId));
-      setApprovalHistory(prev => [updatedRequest, ...prev]);
-
-      setSuccess(`Request ${decision} successfully`);
-      setShowDetailsModal(false);
-      setApprovalMessage('');
-
+      if (response.ok) {
+        // Reload data to reflect changes
+        await Promise.all([
+          loadPendingApprovals(),
+          loadApprovalHistory()
+        ]);
+        setSuccess(`Request ${decision} successfully`);
+        setShowDetailsModal(false);
+        setApprovalMessage('');
+      } else {
+        setError(`Failed to ${decision} request`);
+      }
     } catch (error) {
       setError(`Failed to ${decision} request`);
     } finally {
@@ -182,20 +131,22 @@ const ExpenseApprovalWorkflow = () => {
   const submitExpenseRequest = async (expenseData) => {
     setLoading(true);
     try {
-      // Mock API call
-      const newRequest = {
-        id: Date.now(),
-        requesterName: user?.name || 'Child',
-        requesterId: user?.id || 'child',
-        status: 'pending',
-        requestedDate: new Date().toISOString().split('T')[0],
-        priority: 'medium',
-        ...expenseData
-      };
+      const token = localStorage.getItem('finguard-token');
+      const response = await fetch('http://localhost:5000/api/family/expense-approvals', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(expenseData)
+      });
 
-      setPendingApprovals(prev => [newRequest, ...prev]);
-      setSuccess('Expense request submitted for approval');
-
+      if (response.ok) {
+        await loadPendingApprovals(); // Reload pending requests
+        setSuccess('Expense request submitted successfully');
+      } else {
+        setError('Failed to submit expense request');
+      }
     } catch (error) {
       setError('Failed to submit expense request');
     } finally {
